@@ -45,6 +45,50 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 )
 
 
+
+
+#COPY PASTE FUNCTION VARIABLES
+#--------------------------------------------
+
+prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
+prop_hair_dynamics_2 = [[],['use_hair_dynamics']]
+
+prop_hd_structure = [['cloth','settings'],['mass','bending_stiffness','bending_damping']]
+prop_hd_structure_2 = [['settings'],['bending_random']]
+
+prop_hd_volume = [['cloth','settings'],['air_damping','air_damping','voxel_cell_size','density_target', 'density_strength']]
+
+#--------------------------------------------
+prop_render = [[],['render_type','material_slot','parent']]
+prop_render_2 = [['id_data'],['show_instancer_for_render']]
+prop_render_path = [['settings'],['use_hair_bspline','render_step']]
+prop_render_timing = [[],[]]
+prop_render_extra = [[],[]]
+
+#--------------------------------------------
+prop_viewport_display = [[],[]]
+
+#--------------------------------------------
+#settings
+prop_children = [['settings']
+                , ['child_type','child_nbr','rendered_child_count' \
+                ,'child_length','child_length_threshold','child_seed' \
+                ,'child_size', 'child_size_random','child_radius' \
+                ,'child_roundness']]
+                
+prop_children_clumping = [[],[]]
+
+prop_children_roughness = [[],[]]
+
+prop_children_klin = [[],[]]
+
+#--------------------------------------------
+prop_hair_shape = [[],[]]
+
+
+
+
+
 #----------------------------------------
 #---------------FUNCTIONS----------------
 #----------------------------------------
@@ -570,7 +614,7 @@ class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
         layout = self.layout
                 
         row = layout.row()        
-        row.label(text = "STILL UNDER WORK")        
+        row.label(text = "DOES NOT WORK")        
         
         row = layout.row()
         row.prop(getObjLocal(context), 'hamgpImportColl', text = "Import Col.")
@@ -595,7 +639,7 @@ class HAIRMGRPLUS_PT_export_curves(hairmgrplusPanel, bpy.types.Panel):
         layout = self.layout
                 
         row = layout.row()        
-        row.label(text = "STILL UNDER WORK")
+        row.label(text = "KINDA OFF WORK")
         
         #box = layout.box()            
         row = layout.row()        
