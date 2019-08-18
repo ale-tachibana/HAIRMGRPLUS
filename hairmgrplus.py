@@ -49,44 +49,58 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 
 #COPY PASTE FUNCTION VARIABLES
 #--------------------------------------------
-
+#hair dynamics
 prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
 prop_hair_dynamics_2 = [[],['use_hair_dynamics']]
-
 prop_hd_structure = [['cloth','settings'],['mass','bending_stiffness','bending_damping']]
 prop_hd_structure_2 = [['settings'],['bending_random']]
-
 prop_hd_volume = [['cloth','settings'],['air_damping','air_damping','voxel_cell_size','density_target', 'density_strength']]
 
 #--------------------------------------------
+#render
 prop_render = [[],['render_type','material_slot','parent']]
 prop_render_2 = [['id_data'],['show_instancer_for_render']]
 prop_render_path = [['settings'],['use_hair_bspline','render_step']]
-prop_render_timing = [[],[]]
-prop_render_extra = [[],[]]
+prop_render_timing = [['settings'],['use_absolute_path_time','path_start','path_end','length_random']]
+prop_render_extra = [['settings'],['use_parent_particles','show_unborn','use_dead']]
 
 #--------------------------------------------
-prop_viewport_display = [[],[]]
+#viewport display
+prop_viewport_display = [['settings'] \
+                        ,['display_method','display_color','display_percentage' \
+                        ,'show_instancer_for_viewport','color_maximum','display_step' \
+                        ,'display_size']]
 
 #--------------------------------------------
-#settings
-prop_children = [['settings']
+#children
+prop_children = [['settings'] \
                 , ['child_type','child_nbr','rendered_child_count' \
                 ,'child_length','child_length_threshold','child_seed' \
                 ,'child_size', 'child_size_random','child_radius' \
                 ,'child_roundness']]
+
+prop_children_parting = [['settings'],['child_parting_factor','child_parting_min','child_parting_max']]
                 
-prop_children_clumping = [[],[]]
+prop_children_clumping = [['settings'] \
+                        ,['use_clump_curve','clump_factor','clump_shape' \
+                        ,'twist','use_twist_curve','twist_curve']]
 
-prop_children_roughness = [[],[]]
+prop_children_roughness = [['settings'] \
+                          ,['use_roughness_curve','roughness_1_size','roughness_endpoint' \
+                          ,'roughness_end_shape','roughness_2','roughness_2_size' \
+                          , 'roughness_2_threshold', 'roughness_curve']]
 
-prop_children_klin = [[],[]]
+prop_children_klin = [['settings'] \
+                     ,['kink','kink_amplitude','kink_amplitude_random' \
+                     ,'kink_axis','kink_axis_random','kink_frequency' \
+                     ,'kink_shape','kink_extra_steps','kink_amplitude' \
+                     ,'kink_amplitude_clump','kink_flat','kink_frequency' \
+                     ,'kink_shape']]
 
 #--------------------------------------------
-prop_hair_shape = [[],[]]
-
-
-
+prop_hair_shape = [['settings'] \
+                  ,['shape','root_radius','tip_radius' \
+                  ,'radius_scale','use_close_tip']]
 
 
 #----------------------------------------
@@ -359,6 +373,14 @@ def Hair2Curves(hairSys, collCurves, context):
         #curveObj.location = hair[1].location                
                 
         addToCol(collCurves, curveObj)
+
+#----------------------------------------
+#----------------------------------------
+#-------------OBJ TYPE-------------------
+#----------------------------------------
+#----------------------------------------
+
+
 
 #----------------------------------------
 #----------------------------------------
