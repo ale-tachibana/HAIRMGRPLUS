@@ -45,8 +45,8 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 )
 
 
-
-
+#----------------------------------------
+#----------------------------------------
 #COPY PASTE FUNCTION VARIABLES
 #--------------------------------------------
 #hair dynamics
@@ -98,9 +98,15 @@ prop_children_klin = [['settings'] \
                      ,'kink_shape']]
 
 #--------------------------------------------
+#shape
 prop_hair_shape = [['settings'] \
                   ,['shape','root_radius','tip_radius' \
                   ,'radius_scale','use_close_tip']]
+
+
+#----------------------------------------
+#----------------------------------------
+
 
 
 #----------------------------------------
@@ -109,6 +115,12 @@ prop_hair_shape = [['settings'] \
 def debugPrint(string):
     print(string)
     pass
+
+def setClipBoard(var):
+    bpy.context.window_manager.clipboard = var
+
+def getClipBoard():
+    return bpy.context.window_manager.clipboard
 
 def evaluateObj(name, context):
     despgraph = context.evaluated_depsgraph_get()
@@ -374,6 +386,19 @@ def Hair2Curves(hairSys, collCurves, context):
                 
         addToCol(collCurves, curveObj)
 
+def IsParticleSelected(context):
+    var_return = True
+    if len(context.selected_objects) == 0:
+        var_return = False            
+    elif context.selected_objects[0].particle_systems is None:
+        var_return = False
+    elif context.selected_objects[0].particle_systems.active is None:
+        var_return = False 
+    elif context.selected_objects[0].particle_systems.active.settings.type != 'HAIR':
+        var_return = False
+    return var_return
+
+
 #----------------------------------------
 #----------------------------------------
 #-------------OBJ TYPE-------------------
@@ -401,44 +426,15 @@ class HAIRMGRPLUS_OT_force_enable_adv(bpy.types.Operator):
     bl_idname = "hairmgrplus.force_enable_adv"    
     bl_label = "TOGGLE ENABLE ADVANCED HAIR"
     
-    def execute(self, context):
-        if len(context.selected_objects) == 0:
-            return {'CANCELLED'}
-        elif context.selected_objects[0].particle_systems is None:
-            return {'CANCELLED'}
-        elif context.selected_objects[0].particle_systems.active is None:
-            return {'CANCELLED'}
-        elif context.selected_objects[0].particle_systems.active.settings.type != 'HAIR':
-            return {'CANCELLED'}
+    @classmethod
+    def poll(cls, context):
+        return IsParticleSelected(context)
         
+    def execute(self, context):                    
         settings = context.selected_objects[0].particle_systems.active.settings
         settings.use_advanced_hair = not settings.use_advanced_hair
         
         return {'FINISHED'}
-
-        
-class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
-    bl_idname = "hairmgrplus.copy_parameters"    
-    bl_label = "COPY PARAMETERS"   
-    
-    @classmethod
-    def poll(cls, context):
-        return False
-    
-    def execute(self, context):
-        return {'FINISHED'}    
-    
-    
-class HAIRMGRPLUS_OT_paste_parameters(bpy.types.Operator):
-    bl_idname = "hairmgrplus.paste_parameters"    
-    bl_label = "PASTE PARAMETERS"   
-    
-    @classmethod
-    def poll(cls, context):
-        return False
-    
-    def execute(self, context):
-        return {'FINISHED'}        
     
 class HAIRMGRPLUS_OT_create_hair_sys(bpy.types.Operator):
     bl_idname = "hairmgrplus.create_hair_sys"    
@@ -555,13 +551,7 @@ class HAIRMGRPLUS_OT_export_to_curves(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         var_return = True
-        if len(context.selected_objects) == 0:
-            var_return = False            
-        elif context.selected_objects[0].particle_systems is None:
-            var_return = False
-        elif context.selected_objects[0].particle_systems.active is None:
-            var_return = False 
-        elif context.selected_objects[0].particle_systems.active.settings.type != 'HAIR':
+        if not IsParticleSelected(context):
             var_return = False
         elif getExpCol(context) is None:
             var_return = False 
@@ -588,6 +578,31 @@ class HAIRMGRPLUS_OT_export_to_curves(bpy.types.Operator):
         return {'FINISHED'}
 
 
+#----------------------------------------
+#--------COPY/PASTE PARAMETERS-----------
+#----------------------------------------
+class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
+    bl_idname = "hairmgrplus.copy_parameters"    
+    bl_label = "COPY PARAMETERS"
+
+    parameter_copy = bpy.props.StringProperty()
+        
+    def execute(self, context):    
+        debugPrint(self.parameter_copy)
+        
+        return {'FINISHED'}
+
+class HAIRMGRPLUS_OT_paste_parameters(bpy.types.Operator):
+    bl_idname = "hairmgrplus.paste_parameters"
+    bl_label = "PASTE PARAMETERS"    
+    
+    @classmethod
+    def poll(cls, context):
+        return IsParticleSelected(context)
+        
+    def execute(self, context):    
+        return {'FINISHED'}
+    
 
 #----------------------------------------
 #------------PT--------------------------
@@ -602,35 +617,49 @@ class HAIRMGRPLUS_PT_panel(hairmgrplusPanel, bpy.types.Panel):
         layout = self.layout
             
         row = layout.row()
-        #row.label(text = "-------")
+
         
         
 class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
-    bl_label = "Hair Manager"
+    bl_label =  "Magement Panel"
     bl_parent_id = "HAIRMGRPLUS_PT_panel"
-        
+                
     def draw(self, context):
         layout = self.layout
         
-        box = layout.box()
-        
-        row = box.row()        
-        row.label(text = "STILL UNDER WORK")
+        #box = layout.box()
+            
+        row = layout.row()
+        row.operator("hairmgrplus.force_enable_adv")         
+    
+        layout.separator()    
                 
         row = layout.row()
-        row.operator("hairmgrplus.force_enable_adv") 
+        row.operator("hairmgrplus.paste_parameters", text="PASTE PARAMETERS") 
         
         row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="-----------") 
-        
-        row = layout.row()
-        row.operator("hairmgrplus.paste_parameters", text="------------") 
+        row.operator("hairmgrplus.copy_parameters", text="COPY PARAMETERS").parameter_copy = "ALL"
 
+        row = layout.row()
+        row.operator("hairmgrplus.copy_parameters", text="COPY - Hair Dynamics").parameter_copy = "HD"
+        
+        row = layout.row()
+        row.operator("hairmgrplus.copy_parameters", text="COPY - Render").parameter_copy = "RENDER"
+
+        row = layout.row()
+        row.operator("hairmgrplus.copy_parameters", text="COPY - Viewport Display").parameter_copy = "VD"        
+        
+        row = layout.row()
+        row.operator("hairmgrplus.copy_parameters", text="COPY - Children").parameter_copy = "CHILDREN"
+                
+        row = layout.row()
+        row.operator("hairmgrplus.copy_parameters", text="COPY - Shape").parameter_copy = "SHAPE"
+        
 
 class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
     bl_label = "Import Curves"
     bl_parent_id = "HAIRMGRPLUS_PT_panel"
-            
+    
     def draw(self, context):
         self.obj = context.object
         layout = self.layout
@@ -650,12 +679,14 @@ class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
                 
         row = layout.row()
         row.operator("hairmgrplus.import_from_curves", text="Import from Curves")         
+                    
+        row = layout.row()        
 
     
 class HAIRMGRPLUS_PT_export_curves(hairmgrplusPanel, bpy.types.Panel):
     bl_label = "Export Curves"
     bl_parent_id = 'HAIRMGRPLUS_PT_panel'
-        
+    
     def draw(self, context):
         self.obj = context.object
         layout = self.layout
