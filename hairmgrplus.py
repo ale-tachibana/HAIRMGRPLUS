@@ -48,7 +48,8 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 #----------------------------------------
 #----------------------------------------
 #COPY PASTE FUNCTION VARIABLES
-#--------------------------------------------
+#----------------------------------------
+#----------------------------------------
 #hair dynamics
 prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
 prop_hair_dynamics_2 = [[],['use_hair_dynamics']]
@@ -58,8 +59,9 @@ prop_hd_volume = [['cloth','settings'],['air_damping','air_damping','voxel_cell_
 
 #--------------------------------------------
 #render
-prop_render = [[],['render_type','material_slot','parent']]
+prop_render = [['settings'],['render_type','material_slot']]
 prop_render_2 = [['id_data'],['show_instancer_for_render']]
+prop_render_3 = [[],['parent']]
 prop_render_path = [['settings'],['use_hair_bspline','render_step']]
 prop_render_timing = [['settings'],['use_absolute_path_time','path_start','path_end','length_random']]
 prop_render_extra = [['settings'],['use_parent_particles','show_unborn','use_dead']]
@@ -68,16 +70,19 @@ prop_render_extra = [['settings'],['use_parent_particles','show_unborn','use_dea
 #viewport display
 prop_viewport_display = [['settings'] \
                         ,['display_method','display_color','display_percentage' \
-                        ,'show_instancer_for_viewport','color_maximum','display_step' \
-                        ,'display_size']]
-
+                        ,'display_size','color_maximum','display_step' ]]
+                        
+prop_viewport_display_2 = [['id_data'],['show_instancer_for_viewport']]                      
+                        
 #--------------------------------------------
 #children
 prop_children = [['settings'] \
                 , ['child_type','child_nbr','rendered_child_count' \
-                ,'child_length','child_length_threshold','child_seed' \
+                ,'child_length','child_length_threshold' \
                 ,'child_size', 'child_size_random','child_radius' \
                 ,'child_roundness']]
+                
+prop_children_2 = [[],['child_seed']]                
 
 prop_children_parting = [['settings'],['child_parting_factor','child_parting_min','child_parting_max']]
                 
@@ -103,11 +108,14 @@ prop_hair_shape = [['settings'] \
                   ,['shape','root_radius','tip_radius' \
                   ,'radius_scale','use_close_tip']]
 
-
 #----------------------------------------
 #----------------------------------------
 
-
+prop_all_hd = [prop_hair_dynamics, prop_hair_dynamics_2, prop_hd_structure, prop_hd_structure_2, prop_hd_volume]
+prop_all_render = [prop_render, prop_render_2, prop_render_3, prop_render_path, prop_render_timing, prop_render_extra]
+prop_all_vd = [prop_viewport_display, prop_viewport_display_2]
+prop_all_children = [prop_children, prop_children_parting, prop_children_clumping, prop_children_roughness, prop_children_klin]                     
+prop_all_hs = [prop_hair_shape]
 
 #----------------------------------------
 #---------------FUNCTIONS----------------
@@ -400,12 +408,57 @@ def IsParticleSelected(context):
 
 
 #----------------------------------------
+#---------------------------------------
+
+
+
+#----------------------------------------
 #----------------------------------------
 #-------------OBJ TYPE-------------------
 #----------------------------------------
 #----------------------------------------
-
-
+class HMGRPCopyPasteType:
+    __arrayCPData = []
+    
+    class CopyPasteData:
+        def __init__(self, path, property, value):
+            self.path = path
+            self.property = property            
+            self.value = value            
+    
+    def __LoadCpDataFromString(self):
+        for data in self.dataArr:
+            pass
+        
+    def __init__(self, dataArr):
+        self.dataArr = dataArr
+        self.__LoadCpDataFromString()
+        
+    def __procPath(self, var, hairSys):
+        returnVar = hairSys
+        for path in var:
+            returnVar = getattr(returnVar, path)
+        return returnVar
+    
+    def Load(self, dataArr, hairSys):
+        for data in dataArr:
+            #debugPrint(data)
+            objpath = self.__procPath(data[0], hairSys)
+            for prop in data[1]:
+                value = getattr(objpath, prop)
+                cpdata = self.CopyPasteData(data[0], prop, value)
+                self.__arrayCPData.append(cpdata)
+    
+    def Print(self):                
+        for item in self.__arrayCPData:
+            debugPrint(item.path)
+            debugPrint(item.property)            
+            debugPrint(item.value)
+            debugPrint('-------------------------------')
+            
+    def ToString(self):
+        for item in self.__arrayCPData:
+            pass
 
 #----------------------------------------
 #----------------------------------------
@@ -585,10 +638,34 @@ class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
     bl_idname = "hairmgrplus.copy_parameters"    
     bl_label = "COPY PARAMETERS"
 
-    parameter_copy = bpy.props.StringProperty()
+    parameter_copy: bpy.props.StringProperty()
+            
+    @classmethod
+    def poll(cls, context):
+        return IsParticleSelected(context)        
         
     def execute(self, context):    
-        debugPrint(self.parameter_copy)
+        #debugPrint(self.parameter_copy)
+        hairSys = context.selected_objects[0].particle_systems.active
+
+        copyData = HMGRPCopyPasteType([])
+                
+        if self.parameter_copy == 'ALL':
+            all = []
+            
+            pass
+        elif self.parameter_copy == 'HD':
+            copyData.Load(prop_all_hd, hairSys)
+        elif self.parameter_copy == 'RENDER':
+            copyData.Load(prop_all_render, hairSys)
+        elif self.parameter_copy == 'VD':            
+            copyData.Load(prop_all_vd, hairSys)
+        elif self.parameter_copy == 'CHILDREN':
+            copyData.Load(prop_all_children, hairSys)
+        elif self.parameter_copy == 'HS':
+            copyData.Load(prop_all_hs, hairSys)        
+        
+        copyData.Print()
         
         return {'FINISHED'}
 
@@ -600,7 +677,9 @@ class HAIRMGRPLUS_OT_paste_parameters(bpy.types.Operator):
     def poll(cls, context):
         return IsParticleSelected(context)
         
-    def execute(self, context):    
+    def execute(self, context):
+        data = getClipBoard()
+        data.Print()            
         return {'FINISHED'}
     
 
@@ -623,7 +702,8 @@ class HAIRMGRPLUS_PT_panel(hairmgrplusPanel, bpy.types.Panel):
 class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
     bl_label =  "Magement Panel"
     bl_parent_id = "HAIRMGRPLUS_PT_panel"
-                
+    bl_options = {'DEFAULT_CLOSED'}
+    
     def draw(self, context):
         layout = self.layout
         
@@ -633,9 +713,12 @@ class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
         row.operator("hairmgrplus.force_enable_adv")         
     
         layout.separator()    
+        layout.separator()        
                 
         row = layout.row()
         row.operator("hairmgrplus.paste_parameters", text="PASTE PARAMETERS") 
+
+        layout.separator()
         
         row = layout.row()
         row.operator("hairmgrplus.copy_parameters", text="COPY PARAMETERS").parameter_copy = "ALL"
@@ -653,7 +736,7 @@ class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
         row.operator("hairmgrplus.copy_parameters", text="COPY - Children").parameter_copy = "CHILDREN"
                 
         row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="COPY - Shape").parameter_copy = "SHAPE"
+        row.operator("hairmgrplus.copy_parameters", text="COPY - Hair Shape").parameter_copy = "HS"
         
 
 class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
