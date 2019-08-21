@@ -32,7 +32,7 @@ import bpy
 import mathutils
 import numpy as np
 import random
-
+import ast
 
 #----------------------------------------
 #---------------PROPERTIES---------------
@@ -50,6 +50,8 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 #COPY PASTE FUNCTION VARIABLES
 #----------------------------------------
 #----------------------------------------
+copy_paste_key = 'HMGRP_COPY_DATA'
+
 #hair dynamics
 prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
 prop_hair_dynamics_2 = [[],['use_hair_dynamics']]
@@ -424,16 +426,30 @@ class HMGRPCopyPasteType:
         def __init__(self, path, property, value):
             self.path = path
             self.property = property            
-            self.value = value            
-    
+            self.value = value
+            self.type = type(value)
+            self.child = []
+            
+            subPath = path
+            subPath.append(property)
+            if str(self.type) == '<class \'bpy.types.CurveMapping\'>':
+                for i in dir(value):
+                    vv = getattr(value, i)
+                    data = self.__init__(subPath,str(i),str(vv))
+                    self.child.append(data)
+        
+        def toString():
+            string = self.path
+        
     def __LoadCpDataFromString(self):
         for data in self.dataArr:
             pass
         
-    def __init__(self, dataArr):
-        self.dataArr = dataArr
-        self.__LoadCpDataFromString()
-        
+    def __init__(self, strData):
+        tmpData = ast.literal_eval(strData)
+        if tmpData[0] == copy_paste_key:
+            self.dataArr = tmpData[1]
+            
     def __procPath(self, var, hairSys):
         returnVar = hairSys
         for path in var:
@@ -454,6 +470,8 @@ class HMGRPCopyPasteType:
             debugPrint(item.path)
             debugPrint(item.property)            
             debugPrint(item.value)
+            debugPrint(item.type)
+            debugPrint(item.child) 
             debugPrint('-------------------------------')
             
     def ToString(self):
@@ -652,8 +670,17 @@ class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
                 
         if self.parameter_copy == 'ALL':
             all = []
-            
-            pass
+            for item in prop_all_hd:
+                all.append(item)
+            for item in prop_all_render:
+                all.append(item)
+            for item in prop_all_vd:
+                all.append(item)
+            for item in prop_all_children:
+                all.append(item)
+            for item in prop_all_hs:                                
+                all.append(item)                                
+            copyData.Load(all, hairSys)
         elif self.parameter_copy == 'HD':
             copyData.Load(prop_all_hd, hairSys)
         elif self.parameter_copy == 'RENDER':
@@ -663,7 +690,7 @@ class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
         elif self.parameter_copy == 'CHILDREN':
             copyData.Load(prop_all_children, hairSys)
         elif self.parameter_copy == 'HS':
-            copyData.Load(prop_all_hs, hairSys)        
+            copyData.Load(prop_all_hs, hairSys)
         
         copyData.Print()
         
@@ -696,7 +723,6 @@ class HAIRMGRPLUS_PT_panel(hairmgrplusPanel, bpy.types.Panel):
         layout = self.layout
             
         row = layout.row()
-
         
         
 class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
@@ -742,7 +768,8 @@ class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
 class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
     bl_label = "Import Curves"
     bl_parent_id = "HAIRMGRPLUS_PT_panel"
-    
+    bl_options = {'DEFAULT_CLOSED'}
+        
     def draw(self, context):
         self.obj = context.object
         layout = self.layout
@@ -769,6 +796,7 @@ class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
 class HAIRMGRPLUS_PT_export_curves(hairmgrplusPanel, bpy.types.Panel):
     bl_label = "Export Curves"
     bl_parent_id = 'HAIRMGRPLUS_PT_panel'
+    bl_options = {'DEFAULT_CLOSED'}    
     
     def draw(self, context):
         self.obj = context.object
