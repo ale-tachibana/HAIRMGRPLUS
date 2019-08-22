@@ -459,7 +459,7 @@ class HMGRPCopyPasteType:
             #debugPrint(self.children)
                 
         def toArray(self):
-            return [str(self.path), str(self.property), str(self.value), str(self.vartype), str(self.children)]
+            return [self.path, self.property, self.value, self.vartype, self.children]
             
     def __init__(self, strData=[]):
         debugPrint(strData)
@@ -484,14 +484,16 @@ class HMGRPCopyPasteType:
     def Load(self, dataArr, hairSys):        
         for data in dataArr:
             objpath = self.__procPath(data[0], hairSys)            
-            for prop in data[1]:                                
+            for prop in data[1]:
+                value = None                                
                 try:
-                    value = getattr(objpath, prop)                    
-                    cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
-                    cpstring = cpdata.toArray()
-                    self.__arrayCPData.append(cpstring)                    
+                    value = getattr(objpath, prop)                               
                 except:
                     debugPrint('parameter does not exist :' + str(prop))                                    
+                
+                cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
+                cpstring = cpdata.toArray()
+                self.__arrayCPData.append(cpstring)                             
     
     def __setHairSysParam(self, hairSys, cpdata):
         #cpdata = CopyPasteData
