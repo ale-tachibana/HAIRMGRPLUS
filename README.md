@@ -17,6 +17,6 @@ Makes it easier to copy and paste hair parameters between hair systems. The sett
 
 Not sure if it can really be done. The current implementation is the third attempt at doing this. The main problem is, you can't set the final calculated coordinates of each hair key. Instead you can only set the local coordinates which in theory could work if you could find the reverse transformation matrix.
   
-- Export Hair *Kind of work*
+- Export Hair *meh works*
 
 The current functionality is not very useful as it can be already done by converting the hair to poly, then the poly to curve.
