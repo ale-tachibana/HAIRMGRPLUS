@@ -50,7 +50,7 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 #COPY PASTE FUNCTION VARIABLES
 #----------------------------------------
 #----------------------------------------
-copy_paste_key = 'HMGRP_COPY_DATA'
+COPY_PASTE_KEY = 'HMGRP_COPY_DATA'
 
 #hair dynamics
 prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
@@ -423,60 +423,108 @@ class HMGRPCopyPasteType:
     __arrayCPData = []
     
     class CopyPasteData:
-        def __init__(self, path, property, value):
-            self.path = path
-            self.property = property            
-            self.value = value
-            self.type = type(value)
-            self.child = []
+        
+        def __init__(self, path=[], property=None, value=None, parseArray=[]):
+            vpath = path
+            vproperty = property
+            vvalue = value
+            vvartype = type(value)
+            vchildren = []
             
-            subPath = path
-            subPath.append(property)
-            if str(self.type) == '<class \'bpy.types.CurveMapping\'>':
-                for i in dir(value):
-                    vv = getattr(value, i)
-                    data = self.__init__(subPath,str(i),str(vv))
-                    self.child.append(data)
-        
-        def toString():
-            string = self.path
-        
-    def __LoadCpDataFromString(self):
-        for data in self.dataArr:
-            pass
-        
-    def __init__(self, strData):
-        tmpData = ast.literal_eval(strData)
-        if tmpData[0] == copy_paste_key:
-            self.dataArr = tmpData[1]
+            if len(parseArray) == 4:
+                vpath = parseArray[0]
+                vproperty = parseArray[1]
+                vvalue = parseArray[2]
+                vvartype = parseArray[3]
+                vchildren = parseArray[4]
+                            
+            self.path = str(vpath)
+            self.property = str(vproperty)
+            self.value = str(vvalue)
+            self.vartype = vvartype
+            self.children = []
             
-    def __procPath(self, var, hairSys):
+            if len(vchildren) > 0:
+                self.children = vchildren
+            
+            if len(parseArray) == 0:
+                subPath = path
+                subPath.append(property)
+                if str(self.vartype) == '<class \'bpy.types.CurveMapping\'>':
+                    for i in dir(value):
+                        vv = getattr(value, i)
+                        data = self.__init__(path=subPath,property=str(i),value=str(vv))
+                        self.children.append(data)
+            
+            #debugPrint(self.children)
+                
+        def toArray(self):
+            return [str(self.path), str(self.property), str(self.value), str(self.vartype), str(self.children)]
+            
+    def __init__(self, strData=[]):
+        debugPrint(strData)
+        if len(strData) > 0:
+            debugPrint('paste data: ' + str(strData))
+            try:
+                tmpData = ast.literal_eval(strData)
+                if tmpData[0] == COPY_PASTE_KEY:
+                    self.__arrayCPData = tmpData[1]
+            except:
+                pass
+            
+    def __procPath(self, var, hairSys):        
         returnVar = hairSys
         for path in var:
-            returnVar = getattr(returnVar, path)
+            try:
+                returnVar = getattr(returnVar, path)
+            except:
+                debugPrint('error path: ' + str(var))
         return returnVar
     
-    def Load(self, dataArr, hairSys):
+    def Load(self, dataArr, hairSys):        
         for data in dataArr:
-            #debugPrint(data)
-            objpath = self.__procPath(data[0], hairSys)
-            for prop in data[1]:
-                value = getattr(objpath, prop)
-                cpdata = self.CopyPasteData(data[0], prop, value)
-                self.__arrayCPData.append(cpdata)
+            objpath = self.__procPath(data[0], hairSys)            
+            for prop in data[1]:                                
+                try:
+                    value = getattr(objpath, prop)                    
+                    cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
+                    cpstring = cpdata.toArray()
+                    self.__arrayCPData.append(cpstring)                    
+                except:
+                    debugPrint('parameter does not exist :' + str(prop))                                    
+    
+    def __setHairSysParam(self, hairSys, cpdata):
+        #cpdata = CopyPasteData
+        debugPrint('path: ' + cpdata.path)        
+        objpath = self.__procPath(ast.literal_eval(cpdata.path), hairSys)
+        #debugPrint(objpath)        
+        try:
+            #setattr(object, name, value)
+            setattr(objpath, cpdata.property, cpdata.value)
+        except:
+            debugPrint('parameter does not exist :' + str(cpdata.property))                                            
+        
+    def __UpdtItem2Hair(self, hairSys, arrayData):
+        for item in arrayData:
+            cpdata = self.CopyPasteData(parseArray=item)
+            self.__setHairSysParam(hairSys, cpdata)    
+            if len(cpdata.children) > 0:
+                self.__UpdtItem2Hair(hairSys, cpdata.children)
+            
+    def UpdateHair(self, hairSys):
+        self.__UpdtItem2Hair(hairSys, self.__arrayCPData)
     
     def Print(self):                
         for item in self.__arrayCPData:
-            debugPrint(item.path)
-            debugPrint(item.property)            
-            debugPrint(item.value)
-            debugPrint(item.type)
-            debugPrint(item.child) 
+            debugPrint(str(item))
             debugPrint('-------------------------------')
             
     def ToString(self):
+        string = '[' + COPY_PASTE_KEY + ','
         for item in self.__arrayCPData:
-            pass
+            string += str(item)
+        string += ']'
+        return string
 
 #----------------------------------------
 #----------------------------------------
@@ -665,8 +713,8 @@ class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
     def execute(self, context):    
         #debugPrint(self.parameter_copy)
         hairSys = context.selected_objects[0].particle_systems.active
-
-        copyData = HMGRPCopyPasteType([])
+        
+        copyData = HMGRPCopyPasteType()
                 
         if self.parameter_copy == 'ALL':
             all = []
@@ -692,7 +740,8 @@ class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
         elif self.parameter_copy == 'HS':
             copyData.Load(prop_all_hs, hairSys)
         
-        copyData.Print()
+        #copyData.Print()
+        setClipBoard(copyData.ToString())
         
         return {'FINISHED'}
 
@@ -706,7 +755,11 @@ class HAIRMGRPLUS_OT_paste_parameters(bpy.types.Operator):
         
     def execute(self, context):
         data = getClipBoard()
-        data.Print()            
+        hairSys = context.selected_objects[0].particle_systems.active
+        
+        copyData = HMGRPCopyPasteType(data)
+        copyData.UpdateHair(hairSys)
+        
         return {'FINISHED'}
     
 
