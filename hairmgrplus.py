@@ -431,7 +431,7 @@ class HMGRPCopyPasteType:
             vvartype = type(value)
             vchildren = []
             
-            if len(parseArray) == 4:
+            if len(parseArray) == 5:
                 vpath = parseArray[0]
                 vproperty = parseArray[1]
                 vvalue = parseArray[2]
@@ -447,6 +447,7 @@ class HMGRPCopyPasteType:
             if len(vchildren) > 0:
                 self.children = vchildren
             
+            '''
             if len(parseArray) == 0:
                 subPath = path
                 subPath.append(property)
@@ -455,24 +456,36 @@ class HMGRPCopyPasteType:
                         vv = getattr(value, i)
                         data = self.__init__(path=subPath,property=str(i),value=str(vv))
                         self.children.append(data)
-            
+            '''
             #debugPrint(self.children)
                 
         def toArray(self):
             return [self.path, self.property, self.value, self.vartype, self.children]
-            
+        
+        @classmethod
+        def arrayToString(self, items):
+            returnstr = '['
+            for i in range(len(items)): 
+                if i > 0:
+                    returnstr += ','
+                returnstr += '\'' + str(items[i]) + '\'' 
+            returnstr += ']'
+            #debugPrint('arrayToString 1: ' + returnstr)
+            #debugPrint('arrayToString 2: ' + str(items))
+            return returnstr
+                    
     def __init__(self, strData=[]):
-        debugPrint(strData)
+        #debugPrint(strData)
         if len(strData) > 0:
-            debugPrint('paste data: ' + str(strData))
+            #debugPrint('paste data: ' + str(strData))
             try:
-                tmpData = ast.literal_eval(strData)
+                tmpData = ast.literal_eval(strData)                
                 if tmpData[0] == COPY_PASTE_KEY:
                     self.__arrayCPData = tmpData[1]
             except:
                 pass
-            
-    def __procPath(self, var, hairSys):        
+    
+    def __procPath(self, var, hairSys):
         returnVar = hairSys
         for path in var:
             try:
@@ -488,8 +501,8 @@ class HMGRPCopyPasteType:
                 value = None                                
                 try:
                     value = getattr(objpath, prop)                               
-                except:
-                    debugPrint('parameter does not exist :' + str(prop))                                    
+                except Exception as e:
+                    debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
                 
                 cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
                 cpstring = cpdata.toArray()
@@ -497,22 +510,23 @@ class HMGRPCopyPasteType:
     
     def __setHairSysParam(self, hairSys, cpdata):
         #cpdata = CopyPasteData
-        debugPrint('path: ' + cpdata.path)        
+        #debugPrint('path: ' + cpdata.path)        
         objpath = self.__procPath(ast.literal_eval(cpdata.path), hairSys)
         #debugPrint(objpath)        
         try:
             #setattr(object, name, value)
-            setattr(objpath, cpdata.property, cpdata.value)
-        except:
-            debugPrint('parameter does not exist :' + str(cpdata.property))                                            
-        
+            value = (cpdata.vartype)(cpdata.value)
+            setattr(objpath, cpdata.property, value)
+        except Exception as e:
+            debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
+    
     def __UpdtItem2Hair(self, hairSys, arrayData):
         for item in arrayData:
             cpdata = self.CopyPasteData(parseArray=item)
             self.__setHairSysParam(hairSys, cpdata)    
             if len(cpdata.children) > 0:
                 self.__UpdtItem2Hair(hairSys, cpdata.children)
-            
+    
     def UpdateHair(self, hairSys):
         self.__UpdtItem2Hair(hairSys, self.__arrayCPData)
     
@@ -520,11 +534,11 @@ class HMGRPCopyPasteType:
         for item in self.__arrayCPData:
             debugPrint(str(item))
             debugPrint('-------------------------------')
-            
+    
     def ToString(self):
-        string = '[' + COPY_PASTE_KEY + ','
-        for item in self.__arrayCPData:
-            string += str(item)
+        string =  '[' + COPY_PASTE_KEY + ','
+        for item in self.__arrayCPData:             
+            string += self.CopyPasteData.arrayToString(item)
         string += ']'
         return string
 
