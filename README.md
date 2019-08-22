@@ -11,7 +11,7 @@ If you want to enable advanced hair AFTER you edited anything in edit mode.
   
 - Copy and Paste
 
-Makes it easier to copy and paste hair paramteres between hair systems. The settings are put into the clipboard.
+Makes it easier to copy and paste hair parameters between hair systems. The settings are put into the clipboard.
  
 - Import Hair *DOES NOT WORK*
 
