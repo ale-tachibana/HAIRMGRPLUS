@@ -512,14 +512,20 @@ class HMGRPCopyPasteType:
         #cpdata = CopyPasteData
         #debugPrint('path: ' + cpdata.path)        
         objpath = self.__procPath(ast.literal_eval(cpdata.path), hairSys)
-        #debugPrint(objpath)        
-        try:
-            #setattr(object, name, value)
-            value = (cpdata.vartype)(cpdata.value)
-            setattr(objpath, cpdata.property, value)
-        except Exception as e:
-            debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
-    
+        #debugPrint(objpath)
+        if str(cpdata.vartype) != '<class \'NoneType\'>':
+            try:
+                #setattr(object, name, value)
+                value = (cpdata.vartype)(cpdata.value)
+                setattr(objpath, cpdata.property, value)
+            except Exception as e:
+                debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
+        else:
+            try:
+                setattr(objpath, cpdata.property, None)
+            except Exception as e:
+                debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))            
+            
     def __UpdtItem2Hair(self, hairSys, arrayData):
         for item in arrayData:
             cpdata = self.CopyPasteData(parseArray=item)
