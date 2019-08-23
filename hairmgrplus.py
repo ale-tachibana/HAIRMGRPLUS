@@ -420,8 +420,7 @@ def IsParticleSelected(context):
 #----------------------------------------
 #----------------------------------------
 class HMGRPCopyPasteType:
-    __arrayCPData = []
-    
+        
     class CopyPasteData:
         
         def __init__(self, path=[], property=None, value=None, parseArray=[]):
@@ -476,6 +475,7 @@ class HMGRPCopyPasteType:
                     
     def __init__(self, strData=[]):
         #debugPrint(strData)
+        self.__arrayCPData = []
         if len(strData) > 0:
             #debugPrint('paste data: ' + str(strData))
             try:
