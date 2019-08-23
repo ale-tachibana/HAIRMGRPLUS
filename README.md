@@ -9,7 +9,7 @@ Adds a panel under particles for extra functionalities.
 
 If you want to enable advanced hair AFTER you edited anything in edit mode.
   
-- Copy and Paste
+- Copy and Paste *still has issues*
 
 Makes it easier to copy and paste hair parameters between hair systems. The settings are put into the clipboard.
  
