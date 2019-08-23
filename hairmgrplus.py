@@ -502,7 +502,7 @@ class HMGRPCopyPasteType:
                 try:
                     value = getattr(objpath, prop)                               
                 except Exception as e:
-                    debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
+                    debugPrint('error:' + str(e))
                 
                 cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
                 cpstring = cpdata.toArray()
