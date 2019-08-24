@@ -455,8 +455,8 @@ class HMGRPCopyPasteType:
                                             
         def toArray(self):
             vchildren =[]
-            #for ch in self.children:
-            #    vchildren.append(ch.toArray)
+            for ch in self.children:
+                vchildren.append(ch.toArray())
             
             return [self.path, self.property, self.value, self.vartype, vchildren]
         
@@ -494,18 +494,28 @@ class HMGRPCopyPasteType:
         vvalue = ''
         vvartype = ''
         vchildren = []
+        
+        vtmpch = []
+        debugPrint('parseArray: ' + str(parseArray))       
         if len(parseArray) == 5:
             vpath = parseArray[0]
             vproperty = parseArray[1]
             vvalue = parseArray[2]
             vvartype = parseArray[3]
-            vchildren = parseArray[4]
+            try:
+                vtmpch = ast.literal_eval(parseArray[4])
+            except:
+                pass
         
-        if str(vvartype) == '<class \'bpy.types.CurveMapping\'>':
-            pass    
+        if str(vvartype) == '<class \'bpy.types.CurveMapping\'>' and len(vtmpch) > 0:
+            for item in vtmpch:
+                debugPrint('------------------------' + item)
+                vchild = self.__CPDObjFromArray(item)
+                vchildren.append(vchild)
+                
             
         return self.CopyPasteData(vpath, vproperty, vvalue, vvartype, vchildren)
-                
+    
     def __CPDObjFromValues(self, path, property, value):
         vpath = str(path)
         vproperty = str(property)
@@ -517,12 +527,16 @@ class HMGRPCopyPasteType:
             tmp_path = path.copy()
             tmp_path.append(vproperty)
             
+            #debugPrint(tmp_path)
+            #debugPrint(dir(value))            
             for tmpprop in dir(value):
-                tmpvalue = getattr(value, tmpprop)
-                
-                #data = self.__CPDObjFromValues(tmp_path, tmpprop, tmpvalue)
-                #vchildren.append(data)
-                            
+                if str(tmpprop) != 'bl_rna':
+                    tmpvalue = getattr(value, tmpprop)
+                    #debugPrint(dir(value))                            
+                    data = self.__CPDObjFromValues(tmp_path, tmpprop, tmpvalue)
+                    debugPrint('data: ' + str(data.toArray()))   
+                    vchildren.append(data)
+        
         return self.CopyPasteData(vpath, vproperty, vvalue, vvartype, vchildren)
         
     
@@ -576,7 +590,7 @@ class HMGRPCopyPasteType:
                 #setattr(object, name, value)
                 value = self.CopyPasteData.castString(cpdata.value, cpdata.vartype)
                 setattr(objpath, cpdata.property, value)
-                debugPrint(str(cpdata.property) + ':' + str(value))
+                #debugPrint(str(cpdata.property) + ':' + str(value))
             except Exception as e:
                 errorPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
             
