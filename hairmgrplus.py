@@ -126,6 +126,10 @@ def debugPrint(string):
     print(string)
     pass
 
+def errorPrint(string):
+    print(string)
+    pass    
+
 def setClipBoard(var):
     bpy.context.window_manager.clipboard = var
 
@@ -467,23 +471,41 @@ class HMGRPCopyPasteType:
             for i in range(len(items)): 
                 if i > 0:
                     returnstr += ','
-                returnstr += '\'' + str(items[i]) + '\'' 
+                returnstr += "\"" + str(items[i]) + "\""
             returnstr += ']'
-            #debugPrint('arrayToString 1: ' + returnstr)
-            #debugPrint('arrayToString 2: ' + str(items))
             return returnstr
-                    
-    def __init__(self, strData=[]):
+
+        @classmethod
+        def castString(self, value, typedef):
+            if str(typedef) == '<class \'NoneType\'>':
+                return None
+            elif str(typedef) == '<class \'bool\'>':
+                if value == 'True':
+                    return True
+                else:
+                    return False
+            elif str(typedef) == '<class \'float\'>':
+                return float(value)
+            elif str(typedef) == '<class \'int\'>':
+                return int(value)                
+            else:        
+                return (typedef)(value)
+                
+    #----------------------------------------------------
+    #----------------------------------------------------    
+    def __init__(self, strData=''):
         #debugPrint(strData)
         self.__arrayCPData = []
         if len(strData) > 0:
             #debugPrint('paste data: ' + str(strData))
             try:
-                tmpData = ast.literal_eval(strData)                
+                tmpData = ast.literal_eval(strData)
+                #print(tmpData[0])
                 if tmpData[0] == COPY_PASTE_KEY:
+                    #debugPrint(tmpData[1])
                     self.__arrayCPData = tmpData[1]
-            except:
-                pass
+            except Exception as e:
+                errorPrint('error:' + str(e))
     
     def __procPath(self, var, hairSys):
         returnVar = hairSys
@@ -491,18 +513,18 @@ class HMGRPCopyPasteType:
             try:
                 returnVar = getattr(returnVar, path)
             except:
-                debugPrint('error path: ' + str(var))
+                errorPrint('error path: ' + str(var))
         return returnVar
     
     def Load(self, dataArr, hairSys):        
         for data in dataArr:
             objpath = self.__procPath(data[0], hairSys)            
-            for prop in data[1]:
+            for prop in data[1]:                
                 value = None                                
                 try:
                     value = getattr(objpath, prop)                               
                 except Exception as e:
-                    debugPrint('error:' + str(e))
+                    errorPrint('error:' + str(e))
                 
                 cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
                 cpstring = cpdata.toArray()
@@ -513,21 +535,18 @@ class HMGRPCopyPasteType:
         #debugPrint('path: ' + cpdata.path)        
         objpath = self.__procPath(ast.literal_eval(cpdata.path), hairSys)
         #debugPrint(objpath)
-        if str(cpdata.vartype) != '<class \'NoneType\'>':
-            try:
-                #setattr(object, name, value)
-                value = (cpdata.vartype)(cpdata.value)
-                setattr(objpath, cpdata.property, value)
-            except Exception as e:
-                debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
-        else:
-            try:
-                setattr(objpath, cpdata.property, None)
-            except Exception as e:
-                debugPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))            
+        try:
+            #setattr(object, name, value)
+            value = self.CopyPasteData.castString(cpdata.value, cpdata.vartype)                
+            setattr(objpath, cpdata.property, value)
+            debugPrint(str(cpdata.property) + ':' + str(value))
+        except Exception as e:
+            errorPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
             
     def __UpdtItem2Hair(self, hairSys, arrayData):
+        #debugPrint(arrayData)
         for item in arrayData:
+            #debugPrint(item)
             cpdata = self.CopyPasteData(parseArray=item)
             self.__setHairSysParam(hairSys, cpdata)    
             if len(cpdata.children) > 0:
@@ -542,12 +561,18 @@ class HMGRPCopyPasteType:
             debugPrint('-------------------------------')
     
     def ToString(self):
-        string =  '[' + COPY_PASTE_KEY + ','
-        for item in self.__arrayCPData:             
-            string += self.CopyPasteData.arrayToString(item)
-        string += ']'
+        string =  '[\"' + COPY_PASTE_KEY + '\",['
+        for i in range(len(self.__arrayCPData)):
+            if i > 0:
+                string += ','
+            string += self.CopyPasteData.arrayToString(self.__arrayCPData[i])
+        string += ']]'
         return string
-
+    #----------------------------------------------------
+    #----------------------------------------------------
+    
+        
+    
 #----------------------------------------
 #----------------------------------------
 #---------------INTERFACE----------------
