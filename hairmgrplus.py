@@ -155,253 +155,264 @@ def getExpCol(context):
 def addToCol(col, obj):
     col.objects.link(obj)
     
-def createHairSystem(context, col_name, hair_count):    
-    
-    hairSys = context.selected_objects[0].modifiers.new(col_name, type='PARTICLE_SYSTEM')
-    hairSys.particle_system.settings.type = 'HAIR'
-    if hair_count < 4:
-        hair_count = 4
-    hairSys.particle_system.settings.count = hair_count
-    #hairSys.particle_system.is_edited = True
-    #hairSys = context.selected_objects[0].particle_systems[-1]
-    
-    return hairSys
-
-def vect2Array4x1(vector):    
-    array = np.array(vector)
-    arr4x1 = np.append(array, [1])
-    return arr4x1
-
-def calcAngle(da, db):
-    da = round(da, 4)
-    db = round(db, 4)        
-    angle = 0
-    if abs(da) > 0:
-        angle = np.arctan(abs(db)/abs(da))
-        if db > 0 and da > 0: #Q1
-            debugPrint('Q1')            
-            angle += 0  
-        elif db > 0 and da < 0: #Q2
-            debugPrint('Q2')
-            angle = (np.pi - angle)
-        elif db < 0 and da < 0: #Q3
-            debugPrint('Q3')           
-            angle = -1 * (np.pi - angle)
-        elif db < 0 and da > 0: #Q4
-            debugPrint('Q4')            
-            angle = -1 * (angle)
-        elif abs(db) == 0 and da < 0:
-            debugPrint('D1')         
-            angle = np.pi
-    elif db > 0:
-        debugPrint('D2')      
-        angle = np.pi/2
-    elif db < 0:    
-        debugPrint('D3')      
-        angle = -1 * (np.pi/2) 
-    return angle   
-
-def calcRotationMax(position, normal, center):
-
-    debugPrint('----------------------------')
-    debugPrint('----------------------------')    
-    (dx, dy, dz) = position * -1    
-    (nx, ny, nz) = normal
-    debugPrint('normal: ' + str(np.round_(normal,4)))    
-    ax = 0 #np.arcsin(nx)  #np.arcsin(nx) #* -1d
-    ay = 0 #np.arcsin(ny)  #np.deg2rad(-45) #np.arcsin(ny) #* -1
-    az = 0 #np.arcsin(nz) * -1
-
-    hh = np.sqrt(np.power(nx,2) + np.power(ny,2))
-    
-    ax = calcAngle(nz, ny)
-    RX = np.array([[1,0,0,0],[0, np.cos(ax), -np.sin(ax), 0],[0, np.sin(ax), np.cos(ax), 0],[0,0,0,1]])
-    
-    #---------------------------------
-    normal_rx = matMul4x4(RX, normal)
-    (nrxx, nrxy, nrxz) = normal_rx
-    debugPrint('normal_rx: ' + str(np.round_(normal_rx,4)))
-    ay = calcAngle(nrxz, nrxx) * -1
-    RY = np.array([[np.cos(ay), 0, np.sin(ay),0],[0, 1, 0, 0],[-np.sin(ay), 0, np.cos(ay), 0],[0,0,0,1]])    
-    
-    #---------------------------------    
-    normal_ry = matMul4x4(RY, normal_rx)
-    debugPrint('normal_ry: ' + str(np.round_(normal_ry,4)))
-    
-    
-    az = 0 #np.pi
-    
-    #print('hh: ' + str(hh))             
-    debugPrint('----------------------------')
-    debugPrint('----------------------------')
-    debugPrint('angle x: ' + str(np.rad2deg(ax)))
-    debugPrint('angle y: ' + str(np.rad2deg(ay)))
-    debugPrint('angle z: ' + str(np.rad2deg(az)))
-    
-    #ROTATION X - [[1,0,0,0][0, cos Ax, -sin Ax, 0][0, sin Ax, cos Ax, 0][0,0,0,1]]
-    #ROTATION Y - [[cos Ay, 0, sin Ay,0][0, 1, 0, 0][-sin Ay, 0, cos Ay, 0][0,0,0,1]]    
-    #ROTATION Z - [[cos Az, -sin Az, 0, 0][sin Az, cos Az, 0, 0][0, 0, 1, 0][0,0,0,1]]        
-    TM = np.array([[1,0,0,dx],[0,1,0,dy],[0,0,1,dz],[0,0,0,1]])
-
-
-    RZ = np.array([[np.cos(az), -np.sin(az), 0, 0],[np.sin(az), np.cos(az), 0, 0],[0, 0, 1, 0],[0,0,0,1]])
-    
-    return TM, RX, RY, RZ
+class Import:    
+    @classmethod    
+    def createHairSystem(self, context, col_name, hair_count):    
         
-def array4x12Vec(array):
-    return mathutils.Vector(array[:3])
-    
-def calcPos(vector, TM, RX, RY, RZ):
-    arr4x1 = vect2Array4x1(vector)
+        hairSys = context.selected_objects[0].modifiers.new(col_name, type='PARTICLE_SYSTEM')
+        hairSys.particle_system.settings.type = 'HAIR'
+        if hair_count < 4:
+            hair_count = 4
+        hairSys.particle_system.settings.count = hair_count
+        #hairSys.particle_system.is_edited = True
+        #hairSys = context.selected_objects[0].particle_systems[-1]
+        
+        return hairSys
+        
+    @classmethod    
+    def __calcAngle(self, da, db):
+        da = round(da, 4)
+        db = round(db, 4)        
+        angle = 0
+        if abs(da) > 0:
+            angle = np.arctan(abs(db)/abs(da))
+            if db > 0 and da > 0: #Q1
+                debugPrint('Q1')            
+                angle += 0  
+            elif db > 0 and da < 0: #Q2
+                debugPrint('Q2')
+                angle = (np.pi - angle)
+            elif db < 0 and da < 0: #Q3
+                debugPrint('Q3')           
+                angle = -1 * (np.pi - angle)
+            elif db < 0 and da > 0: #Q4
+                debugPrint('Q4')            
+                angle = -1 * (angle)
+            elif abs(db) == 0 and da < 0:
+                debugPrint('D1')         
+                angle = np.pi
+        elif db > 0:
+            debugPrint('D2')      
+            angle = np.pi/2
+        elif db < 0:    
+            debugPrint('D3')      
+            angle = -1 * (np.pi/2) 
+        return angle   
 
-    arr4x1 = np.matmul(TM, arr4x1)    
-    arr4x1 = np.matmul(RX, arr4x1)    
-    arr4x1 = np.matmul(RY, arr4x1)    
-    arr4x1 = np.matmul(RZ, arr4x1)
-                        
-    return array4x12Vec(arr4x1)
-        
-def printHairKey(context):
-    eval_ob = evaluateObj(context.selected_objects[0].name, context)
-    evalHair = eval_ob.particle_systems[-1]
-    
-    debugPrint('----------------------------')
-    debugPrint('----------------------------')    
-    for index in range(len(evalHair.particles)):        
-        hairEval = evalHair.particles[index]
-                
-        faceindex = eval_ob.closest_point_on_mesh(hairEval.location)[-1]
-        position = eval_ob.closest_point_on_mesh(hairEval.location)[1]
-        normal = eval_ob.data.polygons[faceindex].normal
-        center = eval_ob.data.polygons[faceindex].center
-        
-        TM, RX, RY, RZ = calcRotationMax(position, normal, center)        
-        
+    @classmethod    
+    def __calcRotationMax(self, position, normal, center):
+
+        debugPrint('----------------------------')
         debugPrint('----------------------------')    
-        debugPrint('----------------------------') 
-        debugPrint('position' + str(position))        
-        debugPrint('normal' + str(normal))
-        debugPrint('center' + str(eval_ob.data.polygons[faceindex].center))
+        (dx, dy, dz) = position * -1    
+        (nx, ny, nz) = normal
+        debugPrint('normal: ' + str(np.round_(normal,4)))    
+        ax = 0 #np.arcsin(nx)  #np.arcsin(nx) #* -1d
+        ay = 0 #np.arcsin(ny)  #np.deg2rad(-45) #np.arcsin(ny) #* -1
+        az = 0 #np.arcsin(nz) * -1
+
+        hh = np.sqrt(np.power(nx,2) + np.power(ny,2))
         
+        ax = self.__calcAngle(nz, ny)
+        RX = np.array([[1,0,0,0],[0, np.cos(ax), -np.sin(ax), 0],[0, np.sin(ax), np.cos(ax), 0],[0,0,0,1]])
+        
+        #---------------------------------
+        normal_rx = self.__matMul4x4(RX, normal)
+        (nrxx, nrxy, nrxz) = normal_rx
+        debugPrint('normal_rx: ' + str(np.round_(normal_rx,4)))
+        ay = self.__calcAngle(nrxz, nrxx) * -1
+        RY = np.array([[np.cos(ay), 0, np.sin(ay),0],[0, 1, 0, 0],[-np.sin(ay), 0, np.cos(ay), 0],[0,0,0,1]])    
+        
+        #---------------------------------    
+        normal_ry = self.__matMul4x4(RY, normal_rx)
+        debugPrint('normal_ry: ' + str(np.round_(normal_ry,4)))
+        
+        
+        az = 0 #np.pi
+        
+        #print('hh: ' + str(hh))             
+        debugPrint('----------------------------')
+        debugPrint('----------------------------')
+        debugPrint('angle x: ' + str(np.rad2deg(ax)))
+        debugPrint('angle y: ' + str(np.rad2deg(ay)))
+        debugPrint('angle z: ' + str(np.rad2deg(az)))
+        
+        #ROTATION X - [[1,0,0,0][0, cos Ax, -sin Ax, 0][0, sin Ax, cos Ax, 0][0,0,0,1]]
+        #ROTATION Y - [[cos Ay, 0, sin Ay,0][0, 1, 0, 0][-sin Ay, 0, cos Ay, 0][0,0,0,1]]    
+        #ROTATION Z - [[cos Az, -sin Az, 0, 0][sin Az, cos Az, 0, 0][0, 0, 1, 0][0,0,0,1]]        
+        TM = np.array([[1,0,0,dx],[0,1,0,dy],[0,0,1,dz],[0,0,0,1]])
+
+
+        RZ = np.array([[np.cos(az), -np.sin(az), 0, 0],[np.sin(az), np.cos(az), 0, 0],[0, 0, 1, 0],[0,0,0,1]])
+        
+        return TM, RX, RY, RZ
+    
+    @classmethod
+    def __vect2Array4x1(self, vector):    
+        array = np.array(vector)
+        arr4x1 = np.append(array, [1])
+        return arr4x1    
+ 
+    @classmethod
+    def __array4x12Vec(self, array):
+        return mathutils.Vector(array[:3])
+
+    @classmethod
+    def __calcPos(self, vector, TM, RX, RY, RZ):
+        arr4x1 = self.__vect2Array4x1(vector)
+
+        arr4x1 = np.matmul(TM, arr4x1)    
+        arr4x1 = np.matmul(RX, arr4x1)    
+        arr4x1 = np.matmul(RY, arr4x1)    
+        arr4x1 = np.matmul(RZ, arr4x1)
+                            
+        return self.__array4x12Vec(arr4x1)
+
+    @classmethod                
+    def printHairKey(self, context):
+        eval_ob = evaluateObj(context.selected_objects[0].name, context)
+        evalHair = eval_ob.particle_systems[-1]
+        
+        debugPrint('----------------------------')
         debugPrint('----------------------------')    
-        debugPrint('----------------------------')        
-        debugPrint('location: ' + str(hairEval.location))
-        debugPrint('velocity: ' + str(hairEval.velocity))      
-        debugPrint('rotation: ' + str(hairEval.rotation))        
-                  
-        for index2 in range(len(hairEval.hair_keys)):
-            hairkey = hairEval.hair_keys[index2]
-            
-            debugPrint('----------------------------')
-            debugPrint('co: ' + str(hairkey.co))
-            debugPrint('co_local: ' + str(hairkey.co_local))
-            
-            calc = calcPos(hairkey.co, TM, RX, RY, RZ)
-            debugPrint('calc_local: ' + str(calc))    
-    
-def returnArrayEq(hair_key):
-    (xl, yl, zl) = hair_key.co_local
-    return xl, yl, zl, hair_key.co
-
-def matMul4x4(AT, co):
-    (x, y, z) = co
-    pos_array = np.array([x,y,z,1])
-            
-    co_local = np.matmul(AT,pos_array)
-    
-    return co_local[:3]
-
-
-def SetRandomHairPos(hairSys, context):
-    
-    bpy.ops.particle.particle_edit_toggle()
-    bpy.ops.particle.particle_edit_toggle()   
-      
-    #remove hair with 0 position on any axis
-    for index in range(len(hairSys.particles)):
-        hair = hairSys.particles[index]
-        for index2 in range(1, len(hair.hair_keys)):
-            hair_key = hair.hair_keys[index2]
-            (x, y, z) = hair_key.co_local
-            x = random.uniform(0.01,0.03) * index2           
-            y = random.uniform(0.1,0.3)  * index2             
-            z = random.uniform(-0.1,-0.3) * index2
-            hair_key.co_local =  mathutils.Vector([x, y, z])
-            
-
-def Curves2Hair(collCurves, hairSys, context):        
-    #hairSys = context.selected_objects[0].particle_systems[-1]        
-    bpy.ops.particle.particle_edit_toggle()
-    bpy.ops.particle.particle_edit_toggle() 
-            
-    print(hairSys.name)
-    eval_ob = evaluateObj(context.selected_objects[0].name, context)
-    evalHair = eval_ob.particle_systems[-1]
-    
-    for index in range(len(hairSys.particles)):
-        #print(index)
-        if index <= len(collCurves):
-            curve = collCurves[index]
-                        
-            #curveEval = evaluateObj(curve.name, context)
-            hair = hairSys.particles[index]
+        for index in range(len(evalHair.particles)):        
             hairEval = evalHair.particles[index]
-                        
-            bezier_pts = curve.data.splines.items()[0][1].bezier_points.items()            
-            
-            
+                    
             faceindex = eval_ob.closest_point_on_mesh(hairEval.location)[-1]
             position = eval_ob.closest_point_on_mesh(hairEval.location)[1]
             normal = eval_ob.data.polygons[faceindex].normal
             center = eval_ob.data.polygons[faceindex].center
-                                    
-            #-------------------------------------
-            #calculate the transformation matrix            
-            #-------------------------------------                        
-            TM, RX, RY, RZ = calcRotationMax(position, normal, center) 
-                                    
-            for index2 in range(len(hair.hair_keys)):
-                if index2 <= len(bezier_pts) - 1:
-                    points = bezier_pts[index2][1]
-                    
-                    hair_key = hair.hair_keys[index2]
-                    hair_kEval = hairEval.hair_keys[index2]
-                                        
-                    calc = calcPos(points.co, TM, RX, RY, RZ)
-                    
-                    #FUCK THIS MOTHERFUCKING SHIT
-                    #WHY CAN'T YOU JUST SET THE .CO VARIABLE????????
-                    #FUCK FUCK FUCK!!!!!!!!!!!!!!!!!!
-                    #hair_key.co_local = calc
-                    hair_key.co_local = calc
+            
+            TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)        
+            
+            debugPrint('----------------------------')    
+            debugPrint('----------------------------') 
+            debugPrint('position' + str(position))        
+            debugPrint('normal' + str(normal))
+            debugPrint('center' + str(eval_ob.data.polygons[faceindex].center))
+            
+            debugPrint('----------------------------')    
+            debugPrint('----------------------------')        
+            debugPrint('location: ' + str(hairEval.location))
+            debugPrint('velocity: ' + str(hairEval.velocity))      
+            debugPrint('rotation: ' + str(hairEval.rotation))        
+                      
+            for index2 in range(len(hairEval.hair_keys)):
+                hairkey = hairEval.hair_keys[index2]
+                
+                debugPrint('----------------------------')
+                debugPrint('co: ' + str(hairkey.co))
+                debugPrint('co_local: ' + str(hairkey.co_local))
+                
+                calc = self.__calcPos(hairkey.co, TM, RX, RY, RZ)
+                debugPrint('calc_local: ' + str(calc))    
 
+    @classmethod            
+    def returnArrayEq(self, hair_key):
+        (xl, yl, zl) = hair_key.co_local
+        return xl, yl, zl, hair_key.co
+
+    @classmethod    
+    def __matMul4x4(self, AT, co):
+        (x, y, z) = co
+        pos_array = np.array([x,y,z,1])
+                
+        co_local = np.matmul(AT,pos_array)
+        
+        return co_local[:3]
+
+    @classmethod    
+    def SetRandomHairPos(self, hairSys, context):
+        
+        bpy.ops.particle.particle_edit_toggle()
+        bpy.ops.particle.particle_edit_toggle()   
+          
+        #remove hair with 0 position on any axis
+        for index in range(len(hairSys.particles)):
+            hair = hairSys.particles[index]
+            for index2 in range(1, len(hair.hair_keys)):
+                hair_key = hair.hair_keys[index2]
+                (x, y, z) = hair_key.co_local
+                x = random.uniform(0.01,0.03) * index2           
+                y = random.uniform(0.1,0.3)  * index2             
+                z = random.uniform(-0.1,-0.3) * index2
+                hair_key.co_local =  mathutils.Vector([x, y, z])
+                
+    @classmethod    
+    def Curves2Hair(self, collCurves, hairSys, context):        
+        #hairSys = context.selected_objects[0].particle_systems[-1]        
+        bpy.ops.particle.particle_edit_toggle()
+        bpy.ops.particle.particle_edit_toggle() 
+                
+        print(hairSys.name)
+        eval_ob = evaluateObj(context.selected_objects[0].name, context)
+        evalHair = eval_ob.particle_systems[-1]
+        
+        for index in range(len(hairSys.particles)):
+            #print(index)
+            if index <= len(collCurves):
+                curve = collCurves[index]
+                            
+                #curveEval = evaluateObj(curve.name, context)
+                hair = hairSys.particles[index]
+                hairEval = evalHair.particles[index]
+                            
+                bezier_pts = curve.data.splines.items()[0][1].bezier_points.items()            
+                
+                
+                faceindex = eval_ob.closest_point_on_mesh(hairEval.location)[-1]
+                position = eval_ob.closest_point_on_mesh(hairEval.location)[1]
+                normal = eval_ob.data.polygons[faceindex].normal
+                center = eval_ob.data.polygons[faceindex].center
+                                        
+                #-------------------------------------
+                #calculate the transformation matrix            
+                #-------------------------------------                        
+                TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center) 
+                                        
+                for index2 in range(len(hair.hair_keys)):
+                    if index2 <= len(bezier_pts) - 1:
+                        points = bezier_pts[index2][1]
+                        
+                        hair_key = hair.hair_keys[index2]
+                        hair_kEval = hairEval.hair_keys[index2]
+                                            
+                        calc = self.__calcPos(points.co, TM, RX, RY, RZ)
+                        
+                        #FUCK THIS MOTHERFUCKING SHIT
+                        #WHY CAN'T YOU JUST SET THE .CO VARIABLE????????
+                        #FUCK FUCK FUCK!!!!!!!!!!!!!!!!!!
+                        #hair_key.co_local = calc
+                        hair_key.co_local = calc
+
+class Export:
+    @classmethod            
+    def Hair2Curves(self, hairSys, collCurves, context):
+        for hair in hairSys.particles.items():        
+            #create curve
+            newCurve = bpy.data.curves.new('haircurve', type='CURVE')
+            newCurve.dimensions = '3D'
+                    
+            spline = newCurve.splines.new('BEZIER')
+            spline.bezier_points.add(len(hair[1].hair_keys.items()) -1)
+            #print('---------------------------------------------') 
+            
+            for index, hairkey in hair[1].hair_keys.items():
+                #change curves
+                spline.bezier_points[index].co = hairkey.co
+                spline.bezier_points[index].handle_left_type = "AUTO"
+                spline.bezier_points[index].handle_right_type = "AUTO"
+                #print(hairkey[1].co_local)
+                #print((x, y, z))
+                                            
+            curveObj = bpy.data.objects.new('curveobj', newCurve)
+            #curveObj.rotation_mode = 'XYZ'
+            #curveObj.rotation_quaternion = hair[1].rotation
+            #curveObj.location = hair[1].location                
+                    
+            addToCol(collCurves, curveObj)
 
     
-def Hair2Curves(hairSys, collCurves, context):
-    for hair in hairSys.particles.items():        
-        #create curve
-        newCurve = bpy.data.curves.new('haircurve', type='CURVE')
-        newCurve.dimensions = '3D'
-                
-        spline = newCurve.splines.new('BEZIER')
-        spline.bezier_points.add(len(hair[1].hair_keys.items()) -1)
-        #print('---------------------------------------------') 
-        
-        for index, hairkey in hair[1].hair_keys.items():
-            #change curves
-            spline.bezier_points[index].co = hairkey.co
-            spline.bezier_points[index].handle_left_type = "AUTO"
-            spline.bezier_points[index].handle_right_type = "AUTO"
-            #print(hairkey[1].co_local)
-            #print((x, y, z))
-                                        
-        curveObj = bpy.data.objects.new('curveobj', newCurve)
-        #curveObj.rotation_mode = 'XYZ'
-        #curveObj.rotation_quaternion = hair[1].rotation
-        #curveObj.location = hair[1].location                
-                
-        addToCol(collCurves, curveObj)
-
 def IsParticleSelected(context):
     var_return = True
     if len(context.selected_objects) == 0:
@@ -640,7 +651,7 @@ class HAIRMGRPLUS_OT_create_hair_sys(bpy.types.Operator):
             if len(bezier_pts) > pointsCount:
                 pointsCount = len(bezier_pts)                
         
-        partSystem = createHairSystem(context, importCol.name, len(filteredCol))
+        partSystem = Import.createHairSystem(context, importCol.name, len(filteredCol))
         
         partSystem.particle_system.settings.hair_step = pointsCount - 1
                 
@@ -669,7 +680,7 @@ class HAIRMGRPLUS_OT_test_calc(bpy.types.Operator):
         
         #print(dir(hairSys))
         #SetRandomHairPos(hairSys, context)  
-        printHairKey(context)
+        Import.printHairKey(context)
         #ExportData(hairSys, context)              
         return {'FINISHED'}
     
@@ -707,7 +718,7 @@ class HAIRMGRPLUS_OT_import_from_curves(bpy.types.Operator):
         hairSys = context.selected_objects[0].particle_systems[-1]
         
         #print(dir(hairSys))    
-        Curves2Hair(filteredCol, hairSys, context)
+        Import.Curves2Hair(filteredCol, hairSys, context)
                 
         return {'FINISHED'}
 
@@ -741,7 +752,7 @@ class HAIRMGRPLUS_OT_export_to_curves(bpy.types.Operator):
         eval_ob = evaluateObj(context.selected_objects[0].name, context)
         #--------------------------------------------
                 
-        Hair2Curves(eval_ob.particle_systems.active, getExpCol(context), context)
+        Export.Hair2Curves(eval_ob.particle_systems.active, getExpCol(context), context)
         
         return {'FINISHED'}
 
