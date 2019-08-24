@@ -119,6 +119,8 @@ prop_all_vd = ['Viewport Display',[prop_viewport_display, prop_viewport_display_
 prop_all_children = ['Children',[prop_children, prop_children_parting, prop_children_clumping, prop_children_roughness, prop_children_klin]]
 prop_all_hs = ['Hair Shape',[prop_hair_shape]]
 
+#prop_test_child = ['Test', [prop_children_roughness]]
+
 prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_all_hs]
 
 
@@ -127,7 +129,7 @@ prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_a
 #---------------FUNCTIONS----------------
 #----------------------------------------
 def debugPrint(string):
-    print(string)
+    #print(string)
     pass
 
 def errorPrint(string):
@@ -523,20 +525,21 @@ class HMGRPCopyPasteType:
         vvartype = type(value)
         vchildren = []        
         
-        if str(vvartype) == '<class \'bpy.types.CurveMapping\'>':
+        '''
+        if str(vvartype) == '<class \'bpy.types.CurveMapping\'>' or str(vvartype) == '<class \'bpy_prop_collection\'>':
             tmp_path = path.copy()
             tmp_path.append(vproperty)
             
             #debugPrint(tmp_path)
             #debugPrint(dir(value))            
             for tmpprop in dir(value):
-                if str(tmpprop) != 'bl_rna':
+                if str(tmpprop) != 'bl_rna' and str(tmpprop) != 'rna_type':
                     tmpvalue = getattr(value, tmpprop)
                     #debugPrint(dir(value))                            
                     data = self.__CPDObjFromValues(tmp_path, tmpprop, tmpvalue)
-                    debugPrint('data: ' + str(data.toArray()))   
+                    #debugPrint('data: ' + str(data.toArray()))   
                     vchildren.append(data)
-        
+        '''
         return self.CopyPasteData(vpath, vproperty, vvalue, vvartype, vchildren)
         
     
