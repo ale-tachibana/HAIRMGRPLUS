@@ -57,7 +57,7 @@ prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
 prop_hair_dynamics_2 = [[],['use_hair_dynamics']]
 prop_hd_structure = [['cloth','settings'],['mass','bending_stiffness','bending_damping']]
 prop_hd_structure_2 = [['settings'],['bending_random']]
-prop_hd_volume = [['cloth','settings'],['air_damping','air_damping','voxel_cell_size','density_target', 'density_strength']]
+prop_hd_volume = [['cloth','settings'],['air_damping','air_damping','voxel_cell_size','density_target', 'density_strength','internal_friction']]
 
 #--------------------------------------------
 #render
@@ -113,11 +113,13 @@ prop_hair_shape = [['settings'] \
 #----------------------------------------
 #----------------------------------------
 
-prop_all_hd = [prop_hair_dynamics, prop_hair_dynamics_2, prop_hd_structure, prop_hd_structure_2, prop_hd_volume]
-prop_all_render = [prop_render, prop_render_2, prop_render_3, prop_render_path, prop_render_timing, prop_render_extra]
-prop_all_vd = [prop_viewport_display, prop_viewport_display_2]
-prop_all_children = [prop_children, prop_children_parting, prop_children_clumping, prop_children_roughness, prop_children_klin]                     
-prop_all_hs = [prop_hair_shape]
+prop_all_hd = ['Hair Dynamics',[prop_hair_dynamics, prop_hair_dynamics_2, prop_hd_structure, prop_hd_structure_2, prop_hd_volume]]
+prop_all_render = ['Render',[prop_render, prop_render_2, prop_render_3, prop_render_path, prop_render_timing, prop_render_extra]]
+prop_all_vd = ['Viewport Display',[prop_viewport_display, prop_viewport_display_2]]
+prop_all_children = ['Children',[prop_children, prop_children_parting, prop_children_clumping, prop_children_roughness, prop_children_klin]]
+prop_all_hs = ['Hair Shape',[prop_hair_shape]]
+
+prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_all_hs]
 
 #----------------------------------------
 #---------------FUNCTIONS----------------
@@ -474,7 +476,7 @@ class HMGRPCopyPasteType:
                 returnstr += "\"" + str(items[i]) + "\""
             returnstr += ']'
             return returnstr
-
+        
         @classmethod
         def castString(self, value, typedef):
             if str(typedef) == '<class \'NoneType\'>':
@@ -765,28 +767,15 @@ class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
                 
         if self.parameter_copy == 'ALL':
             all = []
-            for item in prop_all_hd:
-                all.append(item)
-            for item in prop_all_render:
-                all.append(item)
-            for item in prop_all_vd:
-                all.append(item)
-            for item in prop_all_children:
-                all.append(item)
-            for item in prop_all_hs:                                
-                all.append(item)                                
+            
+            for pp in prop_all:
+                for pp2 in pp[1]:
+                    all.append(pp2)
+                                                   
             copyData.Load(all, hairSys)
-        elif self.parameter_copy == 'HD':
-            copyData.Load(prop_all_hd, hairSys)
-        elif self.parameter_copy == 'RENDER':
-            copyData.Load(prop_all_render, hairSys)
-        elif self.parameter_copy == 'VD':            
-            copyData.Load(prop_all_vd, hairSys)
-        elif self.parameter_copy == 'CHILDREN':
-            copyData.Load(prop_all_children, hairSys)
-        elif self.parameter_copy == 'HS':
-            copyData.Load(prop_all_hs, hairSys)
-        
+        else:
+            index = int(self.parameter_copy)            
+            copyData.Load(prop_all[index][1], hairSys)            
         #copyData.Print()
         setClipBoard(copyData.ToString())
         
@@ -849,20 +838,11 @@ class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
         row = layout.row()
         row.operator("hairmgrplus.copy_parameters", text="COPY PARAMETERS").parameter_copy = "ALL"
 
-        row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="COPY - Hair Dynamics").parameter_copy = "HD"
-        
-        row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="COPY - Render").parameter_copy = "RENDER"
-
-        row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="COPY - Viewport Display").parameter_copy = "VD"        
-        
-        row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="COPY - Children").parameter_copy = "CHILDREN"
-                
-        row = layout.row()
-        row.operator("hairmgrplus.copy_parameters", text="COPY - Hair Shape").parameter_copy = "HS"
+        for index in range(len(prop_all)):
+            label = 'COPY - ' + prop_all[index][0]
+            
+            row = layout.row()
+            row.operator("hairmgrplus.copy_parameters", text=label).parameter_copy = str(index)
         
 
 class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
