@@ -826,7 +826,7 @@ class HAIRMGRPLUS_PT_panel(hairmgrplusPanel, bpy.types.Panel):
         
         
 class HAIRMGRPLUS_PT_manager(hairmgrplusPanel, bpy.types.Panel):
-    bl_label =  "Magement Panel"
+    bl_label =  "Management Panel"
     bl_parent_id = "HAIRMGRPLUS_PT_panel"
     bl_options = {'DEFAULT_CLOSED'}
     
