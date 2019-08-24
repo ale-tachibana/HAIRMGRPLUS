@@ -121,6 +121,8 @@ prop_all_hs = ['Hair Shape',[prop_hair_shape]]
 
 prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_all_hs]
 
+
+
 #----------------------------------------
 #---------------FUNCTIONS----------------
 #----------------------------------------
@@ -411,6 +413,10 @@ class Export:
             #curveObj.location = hair[1].location                
                     
             addToCol(collCurves, curveObj)
+            
+    @classmethod
+    def Hair2Poly(self, hairSys, collCurves, context):
+        pass
 
     
 def IsParticleSelected(context):
@@ -440,43 +446,19 @@ class HMGRPCopyPasteType:
         
     class CopyPasteData:
         
-        def __init__(self, path=[], property=None, value=None, parseArray=[]):
-            vpath = path
-            vproperty = property
-            vvalue = value
-            vvartype = type(value)
-            vchildren = []
-            
-            if len(parseArray) == 5:
-                vpath = parseArray[0]
-                vproperty = parseArray[1]
-                vvalue = parseArray[2]
-                vvartype = parseArray[3]
-                vchildren = parseArray[4]
-                            
-            self.path = str(vpath)
-            self.property = str(vproperty)
-            self.value = str(vvalue)
-            self.vartype = vvartype
-            self.children = []
-            
-            if len(vchildren) > 0:
-                self.children = vchildren
-            
-            '''
-            if len(parseArray) == 0:
-                subPath = path
-                subPath.append(property)
-                if str(self.vartype) == '<class \'bpy.types.CurveMapping\'>':
-                    for i in dir(value):
-                        vv = getattr(value, i)
-                        data = self.__init__(path=subPath,property=str(i),value=str(vv))
-                        self.children.append(data)
-            '''
-            #debugPrint(self.children)
-                
+        def __init__(self, path, property, value, vartype, children):            
+            self.path = path
+            self.property = property
+            self.value = value
+            self.vartype = vartype
+            self.children = children
+                                            
         def toArray(self):
-            return [self.path, self.property, self.value, self.vartype, self.children]
+            vchildren =[]
+            #for ch in self.children:
+            #    vchildren.append(ch.toArray)
+            
+            return [self.path, self.property, self.value, self.vartype, vchildren]
         
         @classmethod
         def arrayToString(self, items):
@@ -502,10 +484,48 @@ class HMGRPCopyPasteType:
             elif str(typedef) == '<class \'int\'>':
                 return int(value)                
             else:        
-                return (typedef)(value)
-                
+                return value
+    
     #----------------------------------------------------
-    #----------------------------------------------------    
+    #----------------------------------------------------
+    def __CPDObjFromArray(self, parseArray):
+        vpath = ''
+        vproperty = ''
+        vvalue = ''
+        vvartype = ''
+        vchildren = []
+        if len(parseArray) == 5:
+            vpath = parseArray[0]
+            vproperty = parseArray[1]
+            vvalue = parseArray[2]
+            vvartype = parseArray[3]
+            vchildren = parseArray[4]
+        
+        if str(vvartype) == '<class \'bpy.types.CurveMapping\'>':
+            pass    
+            
+        return self.CopyPasteData(vpath, vproperty, vvalue, vvartype, vchildren)
+                
+    def __CPDObjFromValues(self, path, property, value):
+        vpath = str(path)
+        vproperty = str(property)
+        vvalue = str(value)
+        vvartype = type(value)
+        vchildren = []        
+        
+        if str(vvartype) == '<class \'bpy.types.CurveMapping\'>':
+            tmp_path = path.copy()
+            tmp_path.append(vproperty)
+            
+            for tmpprop in dir(value):
+                tmpvalue = getattr(value, tmpprop)
+                
+                #data = self.__CPDObjFromValues(tmp_path, tmpprop, tmpvalue)
+                #vchildren.append(data)
+                            
+        return self.CopyPasteData(vpath, vproperty, vvalue, vvartype, vchildren)
+        
+    
     def __init__(self, strData=''):
         #debugPrint(strData)
         self.__arrayCPData = []
@@ -519,6 +539,9 @@ class HMGRPCopyPasteType:
                     self.__arrayCPData = tmpData[1]
             except Exception as e:
                 errorPrint('error:' + str(e))
+    
+    def __loadChildren(self, childrenArr):
+        return childrenArr
     
     def __procPath(self, var, hairSys):
         returnVar = hairSys
@@ -539,28 +562,29 @@ class HMGRPCopyPasteType:
                 except Exception as e:
                     errorPrint('error:' + str(e))
                 
-                cpdata = self.CopyPasteData(path=data[0], property=prop, value=value)                    
-                cpstring = cpdata.toArray()
+                cpdata = self.__CPDObjFromValues(data[0], prop, value)                                        
+                cpstring = cpdata.toArray() 
                 self.__arrayCPData.append(cpstring)                             
     
     def __setHairSysParam(self, hairSys, cpdata):
         #cpdata = CopyPasteData
-        #debugPrint('path: ' + cpdata.path)        
-        objpath = self.__procPath(ast.literal_eval(cpdata.path), hairSys)
-        #debugPrint(objpath)
-        try:
-            #setattr(object, name, value)
-            value = self.CopyPasteData.castString(cpdata.value, cpdata.vartype)                
-            setattr(objpath, cpdata.property, value)
-            debugPrint(str(cpdata.property) + ':' + str(value))
-        except Exception as e:
-            errorPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
+        #debugPrint('path: ' + cpdata.path) 
+        if cpdata.property != '':       
+            objpath = self.__procPath(ast.literal_eval(cpdata.path), hairSys)
+            #debugPrint(objpath)
+            try:
+                #setattr(object, name, value)
+                value = self.CopyPasteData.castString(cpdata.value, cpdata.vartype)
+                setattr(objpath, cpdata.property, value)
+                debugPrint(str(cpdata.property) + ':' + str(value))
+            except Exception as e:
+                errorPrint('error:' + str(e) + ', parameter: ' + str(cpdata.toArray()))
             
     def __UpdtItem2Hair(self, hairSys, arrayData):
         #debugPrint(arrayData)
         for item in arrayData:
             #debugPrint(item)
-            cpdata = self.CopyPasteData(parseArray=item)
+            cpdata = self.__CPDObjFromArray(item)
             self.__setHairSysParam(hairSys, cpdata)    
             if len(cpdata.children) > 0:
                 self.__UpdtItem2Hair(hairSys, cpdata.children)
@@ -683,6 +707,35 @@ class HAIRMGRPLUS_OT_test_calc(bpy.types.Operator):
         Import.printHairKey(context)
         #ExportData(hairSys, context)              
         return {'FINISHED'}
+
+
+class HAIRMGRPLUS_OT_test_calc(bpy.types.Operator):        
+    bl_idname = "hairmgrplus.test_calc"    
+    bl_label = "Test Calc"
+    
+    @classmethod
+    def poll(cls, context):
+        var_return = True
+        if len(context.selected_objects) == 0:
+            var_return = False    
+        elif getImpCol(context) is None:
+            var_return = False
+        elif len(getImpCol(context).all_objects.items()) == 0:
+            var_return = False
+            
+        return var_return
+        
+    def execute(self, context): 
+        self.obj = context.object
+        
+        hairSys = context.selected_objects[0].particle_systems[-1]
+        
+        #print(dir(hairSys))
+        #SetRandomHairPos(hairSys, context)  
+        Import.printHairKey(context)
+        #ExportData(hairSys, context)              
+        return {'FINISHED'}
+
     
     
 class HAIRMGRPLUS_OT_import_from_curves(bpy.types.Operator):
@@ -723,9 +776,11 @@ class HAIRMGRPLUS_OT_import_from_curves(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class HAIRMGRPLUS_OT_export_to_curves(bpy.types.Operator):    
-    bl_idname = "hairmgrplus.export_to_curves"
-    bl_label = "Export to Curves"
+class HAIRMGRPLUS_OT_export(bpy.types.Operator):    
+    bl_idname = "hairmgrplus.export"
+    bl_label = "Export"
+    
+    export_type: bpy.props.StringProperty()    
 
     @classmethod
     def poll(cls, context):
@@ -742,7 +797,7 @@ class HAIRMGRPLUS_OT_export_to_curves(bpy.types.Operator):
         
         bpy.ops.particle.particle_edit_toggle()
         bpy.ops.particle.particle_edit_toggle()
-                
+        
         if len(context.selected_objects[0].particle_systems.active.particles.items()) == 0:
             print('Particle system has no hairs')
             return {'CANCELLED'}
@@ -751,13 +806,17 @@ class HAIRMGRPLUS_OT_export_to_curves(bpy.types.Operator):
         #--------------------------------------------
         eval_ob = evaluateObj(context.selected_objects[0].name, context)
         #--------------------------------------------
-                
-        Export.Hair2Curves(eval_ob.particle_systems.active, getExpCol(context), context)
+        
+        if self.export_type == 'CURVE': 
+            Export.Hair2Curves(eval_ob.particle_systems.active, getExpCol(context), context)
+        elif self.export_type == 'POLY':
+            Export.Hair2Poly(eval_ob.particle_systems.active, getExpCol(context), context)
+            
         
         return {'FINISHED'}
 
 
-#----------------------------------------
+#----------------------------------------a
 #--------COPY/PASTE PARAMETERS-----------
 #----------------------------------------
 class HAIRMGRPLUS_OT_copy_parameters(bpy.types.Operator):
@@ -888,7 +947,7 @@ class HAIRMGRPLUS_PT_export_curves(hairmgrplusPanel, bpy.types.Panel):
     bl_label = "Export Curves"
     bl_parent_id = 'HAIRMGRPLUS_PT_panel'
     bl_options = {'DEFAULT_CLOSED'}    
-    
+            
     def draw(self, context):
         self.obj = context.object
         layout = self.layout
@@ -901,7 +960,12 @@ class HAIRMGRPLUS_PT_export_curves(hairmgrplusPanel, bpy.types.Panel):
         row.prop(getObjLocal(context), 'hamgpExportColl', text = "Export Col.")
 
         row = layout.row()        
-        row.operator("hairmgrplus.export_to_curves", text="Export to Curves")       
+        button = row.operator("hairmgrplus.export", text="Export to Curves")       
+        button.export_type = "CURVE"
+        
+        row = layout.row()        
+        button = row.operator("hairmgrplus.export", text="Export to Poly") 
+        button.export_type =  "POLY" 
 
 #----------------------------------------
 #----------------------------------------
@@ -921,7 +985,7 @@ classes = (
     , HAIRMGRPLUS_OT_create_hair_sys
     , HAIRMGRPLUS_OT_test_calc
     , HAIRMGRPLUS_OT_import_from_curves
-    , HAIRMGRPLUS_OT_export_to_curves    
+    , HAIRMGRPLUS_OT_export    
     , HAIRMGRPLUS_PT_manager
     , HAIRMGRPLUS_PT_import_curves
     , HAIRMGRPLUS_PT_export_curves    
