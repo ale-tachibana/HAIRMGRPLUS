@@ -53,8 +53,9 @@ bpy.types.Scene.hamgpExportColl = bpy.props.PointerProperty(
 COPY_PASTE_KEY = 'HMGRP_COPY_DATA'
 
 #hair dynamics
-prop_hair_dynamics = [['cloth','settings'],['quality','pin_stiffness']]
-prop_hair_dynamics_2 = [[],['use_hair_dynamics']]
+prop_hair_dynamics = [[],['use_hair_dynamics']]
+prop_hair_dynamics_2 = [['cloth','settings'],['quality','pin_stiffness']]
+
 prop_hd_structure = [['cloth','settings'],['mass','bending_stiffness','bending_damping']]
 prop_hd_structure_2 = [['settings'],['bending_random']]
 prop_hd_volume = [['cloth','settings'],['air_damping','air_damping','voxel_cell_size','density_target', 'density_strength','internal_friction']]
@@ -112,15 +113,15 @@ prop_hair_shape = [['settings'] \
 
 #----------------------------------------
 #----------------------------------------
-
+#add menu name
 prop_all_hd = ['Hair Dynamics',[prop_hair_dynamics, prop_hair_dynamics_2, prop_hd_structure, prop_hd_structure_2, prop_hd_volume]]
 prop_all_render = ['Render',[prop_render, prop_render_2, prop_render_3, prop_render_path, prop_render_timing, prop_render_extra]]
 prop_all_vd = ['Viewport Display',[prop_viewport_display, prop_viewport_display_2]]
 prop_all_children = ['Children',[prop_children, prop_children_parting, prop_children_clumping, prop_children_roughness, prop_children_klin]]
 prop_all_hs = ['Hair Shape',[prop_hair_shape]]
-
 #prop_test_child = ['Test', [prop_children_roughness]]
 
+#prop_all is used to build the panel COPY buttons
 prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_all_hs]
 
 
@@ -129,12 +130,12 @@ prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_a
 #---------------FUNCTIONS----------------
 #----------------------------------------
 def debugPrint(string):
-    #print(string)
+    print(string)
     pass
 
 def errorPrint(string):
     print(string)
-    pass    
+    pass
 
 def setClipBoard(var):
     bpy.context.window_manager.clipboard = var
@@ -159,6 +160,21 @@ def getExpCol(context):
 def addToCol(col, obj):
     col.objects.link(obj)
     
+def IsParticleSelected(context):
+    var_return = True
+    if len(context.selected_objects) == 0:
+        var_return = False            
+    elif context.selected_objects[0].particle_systems is None:
+        var_return = False
+    elif context.selected_objects[0].particle_systems.active is None:
+        var_return = False 
+    elif context.selected_objects[0].particle_systems.active.settings.type != 'HAIR':
+        var_return = False
+    return var_return
+
+#----------------------------------------
+#----------------------------------------    
+#----------------------------------------
 class Import:    
     @classmethod    
     def createHairSystem(self, context, col_name, hair_count):    
@@ -201,8 +217,37 @@ class Import:
         elif db < 0:    
             debugPrint('D3')      
             angle = -1 * (np.pi/2) 
-        return angle   
-
+        return angle 
+    
+    @classmethod
+    def __findZMatRot(self, particle, TM, RX, RY):
+        #|cosA  sinA   0    0 
+        #|sinA  cosA   0    0
+        #|0      0     1    0
+        #|0      0     0    1
+        RZ = [[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 1, 0],[1, 0, 0, 1]]
+        pos1 = self.__calcPos(particle.hair_keys[1].co, TM, RX, RY, RZ)
+        pos2 = self.__calcPos(particle.hair_keys[2].co, TM, RX, RY, RZ)
+                
+        az = 0
+        (x1, y1, z1) = pos1
+        (x2, y2, z2) = pos2
+        
+        (xl1, yl1, zl1) = particle.hair_keys[1].co_local
+        (xl2, yl2, zl2) = particle.hair_keys[2].co_local
+        
+        # x_local = cozZ * x -sinZ * y
+        a = np.array([[x1, y1],[x2, y2]])
+        b = np.array([xl1, xl2])
+        try:
+            x = np.linalg.solve(a,b)
+            (cosZ, sinZ) = x
+            az = np.arccoz(cosZ)
+        except:
+            pass
+        RZ = np.array([[np.cos(az), -np.sin(az), 0, 0],[np.sin(az), np.cos(az), 0, 0],[0, 0, 1, 0],[0,0,0,1]])
+        return RZ
+    
     @classmethod    
     def __calcRotationMax(self, position, normal, center):
 
@@ -214,7 +259,7 @@ class Import:
         ax = 0 #np.arcsin(nx)  #np.arcsin(nx) #* -1d
         ay = 0 #np.arcsin(ny)  #np.deg2rad(-45) #np.arcsin(ny) #* -1
         az = 0 #np.arcsin(nz) * -1
-
+        
         hh = np.sqrt(np.power(nx,2) + np.power(ny,2))
         
         ax = self.__calcAngle(nz, ny)
@@ -283,11 +328,12 @@ class Import:
             hairEval = evalHair.particles[index]
                     
             faceindex = eval_ob.closest_point_on_mesh(hairEval.location)[-1]
-            position = eval_ob.closest_point_on_mesh(hairEval.location)[1]
+            position = eval_ob.closest_point_on_mesh(hairEval.location)[1]            
             normal = eval_ob.data.polygons[faceindex].normal
             center = eval_ob.data.polygons[faceindex].center
             
             TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)        
+            RZ = self.__findZMatRot(hairEval, TM, RX, RY)            
             
             debugPrint('----------------------------')    
             debugPrint('----------------------------') 
@@ -334,13 +380,16 @@ class Import:
         #remove hair with 0 position on any axis
         for index in range(len(hairSys.particles)):
             hair = hairSys.particles[index]
+                        
             for index2 in range(1, len(hair.hair_keys)):
                 hair_key = hair.hair_keys[index2]
                 (x, y, z) = hair_key.co_local
-                x = random.uniform(0.01,0.03) * index2           
-                y = random.uniform(0.1,0.3)  * index2             
-                z = random.uniform(-0.1,-0.3) * index2
+                x = random.uniform(-0.3,0.3) * index2           
+                y = random.uniform(-0.3,0.3) * index2             
+                z = random.uniform(0.1,0.3) * index2
                 hair_key.co_local =  mathutils.Vector([x, y, z])
+            
+            hair.hair_keys[0].co_local = mathutils.Vector([0, 0, 0])
                 
     @classmethod    
     def Curves2Hair(self, collCurves, hairSys, context):        
@@ -362,18 +411,19 @@ class Import:
                 hairEval = evalHair.particles[index]
                             
                 bezier_pts = curve.data.splines.items()[0][1].bezier_points.items()            
-                
-                
+                                
                 faceindex = eval_ob.closest_point_on_mesh(hairEval.location)[-1]
-                position = eval_ob.closest_point_on_mesh(hairEval.location)[1]
+                #position = eval_ob.closest_point_on_mesh(hairEval.location)[1]
+                position = hairEval.hair_keys[0].co #uses the first hair key as the translation delta, works if co_local = 0
                 normal = eval_ob.data.polygons[faceindex].normal
                 center = eval_ob.data.polygons[faceindex].center
-                                        
+                
                 #-------------------------------------
                 #calculate the transformation matrix            
                 #-------------------------------------                        
-                TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center) 
-                                        
+                TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)               
+                RZ = self.__findZMatRot(hair, TM, RX, RY)
+                
                 for index2 in range(len(hair.hair_keys)):
                     if index2 <= len(bezier_pts) - 1:
                         points = bezier_pts[index2][1]
@@ -389,6 +439,10 @@ class Import:
                         #hair_key.co_local = calc
                         hair_key.co_local = calc
 
+
+#----------------------------------------
+#----------------------------------------    
+#----------------------------------------
 class Export:
     @classmethod            
     def Hair2Curves(self, hairSys, collCurves, context):
@@ -419,20 +473,6 @@ class Export:
     @classmethod
     def Hair2Poly(self, hairSys, collCurves, context):
         pass
-
-    
-def IsParticleSelected(context):
-    var_return = True
-    if len(context.selected_objects) == 0:
-        var_return = False            
-    elif context.selected_objects[0].particle_systems is None:
-        var_return = False
-    elif context.selected_objects[0].particle_systems.active is None:
-        var_return = False 
-    elif context.selected_objects[0].particle_systems.active.settings.type != 'HAIR':
-        var_return = False
-    return var_return
-
 
 #----------------------------------------
 #---------------------------------------
@@ -726,9 +766,9 @@ class HAIRMGRPLUS_OT_test_calc(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class HAIRMGRPLUS_OT_test_calc(bpy.types.Operator):        
-    bl_idname = "hairmgrplus.test_calc"    
-    bl_label = "Test Calc"
+class HAIRMGRPLUS_OT_random_pos(bpy.types.Operator):        
+    bl_idname = "hairmgrplus.random_pos"    
+    bl_label = "Random Pos"
     
     @classmethod
     def poll(cls, context):
@@ -748,8 +788,8 @@ class HAIRMGRPLUS_OT_test_calc(bpy.types.Operator):
         hairSys = context.selected_objects[0].particle_systems[-1]
         
         #print(dir(hairSys))
-        #SetRandomHairPos(hairSys, context)  
-        Import.printHairKey(context)
+        Import.SetRandomHairPos(hairSys, context)  
+        #Import.printHairKey(context)
         #ExportData(hairSys, context)              
         return {'FINISHED'}
 
@@ -952,8 +992,11 @@ class HAIRMGRPLUS_PT_import_curves(hairmgrplusPanel, bpy.types.Panel):
         row.operator("hairmgrplus.create_hair_sys", text="Create Hair")         
                 
         row = layout.row()
-        row.operator("hairmgrplus.test_calc", text="Test Transf. Matrix")                
-                
+        row.operator("hairmgrplus.test_calc", text="Test Transf. Matrix")  
+                        
+        row = layout.row()
+        row.operator("hairmgrplus.random_pos", text="Random Pos")          
+                    
         row = layout.row()
         row.operator("hairmgrplus.import_from_curves", text="Import from Curves")         
                     
@@ -1001,6 +1044,7 @@ classes = (
     , HAIRMGRPLUS_OT_paste_parameters
     , HAIRMGRPLUS_OT_create_hair_sys
     , HAIRMGRPLUS_OT_test_calc
+    , HAIRMGRPLUS_OT_random_pos
     , HAIRMGRPLUS_OT_import_from_curves
     , HAIRMGRPLUS_OT_export    
     , HAIRMGRPLUS_PT_manager
