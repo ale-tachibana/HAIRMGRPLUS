@@ -220,6 +220,55 @@ class Import:
         return angle 
     
     @classmethod
+    def __solveRotationMax(self, position, particle):        
+        A = B = C = D = E = F = G = H = I = J = K = 0
+        
+        (dx, dy, dz) = position * -1
+        TM = np.array([[1,0,0,dx],[0,1,0,dy],[0,0,1,dz],[0,0,0,1]])
+        
+        co1 = self.__matMul4x4(TM, particle.hair_keys[1].co)
+        co2 = self.__matMul4x4(TM, particle.hair_keys[2].co)
+        co3 = self.__matMul4x4(TM, particle.hair_keys[3].co)                
+                
+        (x1, y1, z1) = co1
+        (x2, y2, z2) = co2
+        (x3, y3, z3) = co3
+        (xl1, yl1, zl1) = particle.hair_keys[1].co_local
+        (xl2, yl2, zl2) = particle.hair_keys[2].co_local
+        (xl3, yl3, zl3) = particle.hair_keys[3].co_local
+        
+        a1 = np.array([[x1, y1, z1],[x2, y2, z2], [x3, y3, z3]])
+        b1 = np.array([xl1, xl2, xl3])
+        
+        a2 = np.array([[x1, y1, z1],[x2, y2, z2], [x3, y3, z3]])
+        b2 = np.array([yl1, yl2, yl3])
+        
+        a3 = np.array([[x1, y1, z1],[x2, y2, z2], [x3, y3, z3]])
+        b3 = np.array([zl1, zl2, zl3])
+
+        try:
+            r1 = np.linalg.solve(a1,b1)
+            (A, B, C) = r1
+        except Exception as e:
+            errorPrint(str(e))        
+        
+        try:
+            r2 = np.linalg.solve(a2,b2)
+            (D, E, F) = r2
+        except Exception as e:
+            errorPrint(str(e))                
+        
+        try:
+            r3 = np.linalg.solve(a3,b3)
+            (H, I, J) = r3
+        except Exception as e:
+            errorPrint(str(e))                
+                
+        MATRIX = [[A, B, C, dx],[D, E, F, dy],[H, I, J, dz],[0, 0, 0, 1]]
+        
+        return MATRIX
+    
+    @classmethod
     def __findZMatRot(self, particle, TM, RX, RY):
         #|cosA  sinA   0    0 
         #|sinA  cosA   0    0
@@ -228,8 +277,10 @@ class Import:
         RZ = [[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 1, 0],[1, 0, 0, 1]]
         pos1 = self.__calcPos(particle.hair_keys[1].co, TM, RX, RY, RZ)
         pos2 = self.__calcPos(particle.hair_keys[2].co, TM, RX, RY, RZ)
-                
+        
         az = 0
+        cosZ = 0
+        sinZ = 0
         (x1, y1, z1) = pos1
         (x2, y2, z2) = pos2
         
@@ -241,18 +292,34 @@ class Import:
         b = np.array([xl1, xl2])
         try:
             x = np.linalg.solve(a,b)
-            (cosZ, sinZ) = x
-            az = np.arccoz(cosZ)
-        except:
-            pass
+            (cosZ, sinZ) = x                  
+        except Exception as e:
+            errorPrint(str(e))
+        
+        try:
+            az1 = np.arccos(cosZ) 
+            if not np.isnan(az1):
+                az = az1
+        except Exception as e:
+            errorPrint(str(e))
+        
+        try:
+            az2 = np.arcsin(sinZ)
+            if not np.isnan(az2):
+                az = az2 
+        except Exception as e:
+            errorPrint(str(e))
+        
         RZ = np.array([[np.cos(az), -np.sin(az), 0, 0],[np.sin(az), np.cos(az), 0, 0],[0, 0, 1, 0],[0,0,0,1]])
+        debugPrint('z angle: ' + str(az))   
+        debugPrint('RZ: ' + str(RZ))
         return RZ
     
     @classmethod    
     def __calcRotationMax(self, position, normal, center):
 
         debugPrint('----------------------------')
-        debugPrint('----------------------------')    
+        debugPrint('----------------------------')      
         (dx, dy, dz) = position * -1    
         (nx, ny, nz) = normal
         debugPrint('normal: ' + str(np.round_(normal,4)))    
@@ -329,11 +396,14 @@ class Import:
                     
             faceindex = eval_ob.closest_point_on_mesh(hairEval.location)[-1]
             position = eval_ob.closest_point_on_mesh(hairEval.location)[1]            
-            normal = eval_ob.data.polygons[faceindex].normal
+            #normal = eval_ob.data.polygons[faceindex].normal
+            normal = hairEval.velocity
             center = eval_ob.data.polygons[faceindex].center
             
-            TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)        
-            RZ = self.__findZMatRot(hairEval, TM, RX, RY)            
+            #TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)        
+            #RZ = self.__findZMatRot(hairEval, TM, RX, RY)
+            
+            TMAT = self.__solveRotationMax(position, hairEval)             
             
             debugPrint('----------------------------')    
             debugPrint('----------------------------') 
@@ -354,7 +424,9 @@ class Import:
                 debugPrint('co: ' + str(hairkey.co))
                 debugPrint('co_local: ' + str(hairkey.co_local))
                 
-                calc = self.__calcPos(hairkey.co, TM, RX, RY, RZ)
+                #calc = self.__calcPos(hairkey.co, TM, RX, RY, RZ)
+                calc = self.__matMul4x4(TMAT, hairkey.co)
+                
                 debugPrint('calc_local: ' + str(calc))    
 
     @classmethod            
@@ -421,8 +493,10 @@ class Import:
                 #-------------------------------------
                 #calculate the transformation matrix            
                 #-------------------------------------                        
-                TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)               
-                RZ = self.__findZMatRot(hair, TM, RX, RY)
+                #TM, RX, RY, RZ = self.__calcRotationMax(position, normal, center)               
+                #RZ = self.__findZMatRot(hair, TM, RX, RY)
+                
+                TMAT = self.__solveRotationMax(position, hair)  
                 
                 for index2 in range(len(hair.hair_keys)):
                     if index2 <= len(bezier_pts) - 1:
@@ -431,7 +505,8 @@ class Import:
                         hair_key = hair.hair_keys[index2]
                         hair_kEval = hairEval.hair_keys[index2]
                                             
-                        calc = self.__calcPos(points.co, TM, RX, RY, RZ)
+                        #calc = self.__calcPos(points.co, TM, RX, RY, RZ)
+                        calc = self.__matMul4x4(TMAT, points.co)
                         
                         #FUCK THIS MOTHERFUCKING SHIT
                         #WHY CAN'T YOU JUST SET THE .CO VARIABLE????????
@@ -1023,9 +1098,9 @@ class HAIRMGRPLUS_PT_export_curves(hairmgrplusPanel, bpy.types.Panel):
         button = row.operator("hairmgrplus.export", text="Export to Curves")       
         button.export_type = "CURVE"
         
-        row = layout.row()        
-        button = row.operator("hairmgrplus.export", text="Export to Poly") 
-        button.export_type =  "POLY" 
+        #row = layout.row()        
+        #button = row.operator("hairmgrplus.export", text="Export to Poly") 
+        #button.export_type =  "POLY" 
 
 #----------------------------------------
 #----------------------------------------
