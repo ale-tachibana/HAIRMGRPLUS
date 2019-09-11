@@ -110,6 +110,13 @@ prop_children_klin = [['settings'] \
 prop_hair_shape = [['settings'] \
                   ,['shape','root_radius','tip_radius' \
                   ,'radius_scale','use_close_tip']]
+                  
+#---------------------------------------------
+#velocity
+prop_velocity = [['settings'] \
+                ,['normal_factor','tangent_factor', 'tangent_phase' \
+                ,'object_align_factor','particle_factor','object_factor' \
+                , 'factor_random']]                  
 
 #----------------------------------------
 #----------------------------------------
@@ -119,10 +126,11 @@ prop_all_render = ['Render',[prop_render, prop_render_2, prop_render_3, prop_ren
 prop_all_vd = ['Viewport Display',[prop_viewport_display, prop_viewport_display_2]]
 prop_all_children = ['Children',[prop_children, prop_children_parting, prop_children_clumping, prop_children_roughness, prop_children_klin]]
 prop_all_hs = ['Hair Shape',[prop_hair_shape]]
+prop_all_veloc = ['Velocity',[prop_velocity]]
 #prop_test_child = ['Test', [prop_children_roughness]]
 
 #prop_all is used to build the panel COPY buttons
-prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_all_hs]
+prop_all = [prop_all_hd, prop_all_render, prop_all_vd, prop_all_children, prop_all_hs, prop_all_veloc]
 
 
 
@@ -599,7 +607,17 @@ class HMGRPCopyPasteType:
             elif str(typedef) == '<class \'float\'>':
                 return float(value)
             elif str(typedef) == '<class \'int\'>':
-                return int(value)                
+                return int(value)
+            elif str(typedef) == '<class \'Vector\'>':
+                tmpstr = value[value.find("(")+1:value.find(")")]
+                tmparr = tmpstr.split(', ')
+                (x, y, z) = tmparr
+                x = float(x)
+                y = float(y)
+                z = float(z)                               
+                tmpvec = mathutils.Vector([x,y,z])
+                #debugPrint(tmpvec)
+                return mathutils.Vector(tmpvec)
             else:        
                 return value
     
